@@ -1,0 +1,2818 @@
+<!doctype html>
+<html lang="pt-BR">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width,initial-scale=1" />
+        <title>WhatsApp Sender</title>
+        <style>
+            * {
+                box-sizing: border-box;
+                margin: 0;
+                padding: 0;
+            }
+            :root {
+                --green: #25d366;
+                --dark: #075e54;
+                --light: #dcf8c6;
+                --gray: #f0f2f5;
+                --red: #e74c3c;
+                --blue: #3498db;
+                --text: #111b21;
+                --muted: #667781;
+                --border: #e0e0e0;
+            }
+            body {
+                font-family: 'Segoe UI', sans-serif;
+                background: var(--gray);
+                color: var(--text);
+                min-height: 100vh;
+            }
+
+            /* HEADER */
+            header {
+                background: var(--dark);
+                color: #fff;
+                padding: 14px 24px;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            }
+            header h1 {
+                font-size: 1.2rem;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+            #conn-badge {
+                font-size: 0.8rem;
+                padding: 4px 14px;
+                border-radius: 20px;
+                background: #555;
+                transition: background 0.3s;
+            }
+            #conn-badge.connected {
+                background: var(--green);
+            }
+            #conn-badge.disconnected {
+                background: var(--red);
+            }
+
+            /* STATS */
+            .stats-bar {
+                background: var(--dark);
+                opacity: 0.85;
+                padding: 6px 24px;
+                display: flex;
+                gap: 24px;
+            }
+            .stat {
+                color: #fff;
+                font-size: 0.82rem;
+                opacity: 0.85;
+            }
+            .stat strong {
+                opacity: 1;
+                font-size: 0.95rem;
+            }
+
+            /* STATUS */
+            #status-bar {
+                margin: 16px 24px 0;
+                padding: 10px 16px;
+                border-radius: 8px;
+                font-size: 0.9rem;
+                background: #eef;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                transition: background 0.3s;
+            }
+            #status-bar.success {
+                background: #d4edda;
+                color: #155724;
+            }
+            #status-bar.error {
+                background: #f8d7da;
+                color: #721c24;
+            }
+            #status-bar.warning {
+                background: #fff3cd;
+                color: #856404;
+            }
+            #status-bar.info {
+                background: #d1ecf1;
+                color: #0c5460;
+            }
+
+            /* LAYOUT */
+            main {
+                max-width: 1100px;
+                margin: 20px auto;
+                padding: 0 16px;
+                display: grid;
+                gap: 20px;
+            }
+
+            /* TABS */
+            .tabs {
+                display: flex;
+                gap: 4px;
+                border-bottom: 2px solid var(--border);
+                margin-bottom: 20px;
+                flex-wrap: wrap;
+            }
+            .tab {
+                padding: 10px 20px;
+                cursor: pointer;
+                border-radius: 8px 8px 0 0;
+                font-weight: 600;
+                color: var(--muted);
+                border: 2px solid transparent;
+                border-bottom: none;
+                transition: all 0.2s;
+            }
+            .tab.active {
+                color: var(--dark);
+                border-color: var(--border);
+                border-bottom-color: #fff;
+                background: #fff;
+                margin-bottom: -2px;
+            }
+
+            /* DOTS ANIMADOS */
+            @keyframes pulse {
+                0%,
+                100% {
+                    opacity: 0.2;
+                }
+                50% {
+                    opacity: 1;
+                }
+            }
+            .dot-anim {
+                color: var(--green);
+                animation: pulse 1.2s infinite;
+                font-size: 1.2rem;
+            }
+
+            /* IA */
+            .ia-badge {
+                background: linear-gradient(135deg, #667eea, #764ba2);
+                color: #fff;
+                font-size: 0.72rem;
+                padding: 2px 8px;
+                border-radius: 20px;
+                margin-left: 6px;
+                vertical-align: middle;
+            }
+            .msg-preview-item {
+                background: #f8f9fa;
+                border-radius: 8px;
+                padding: 12px;
+                margin-bottom: 10px;
+                border-left: 3px solid var(--green);
+            }
+            .msg-preview-item .nome {
+                font-weight: 700;
+                font-size: 0.88rem;
+                color: var(--dark);
+                margin-bottom: 4px;
+            }
+            .msg-preview-item .msg {
+                font-size: 0.9rem;
+                white-space: pre-wrap;
+            }
+            .msg-preview-item textarea {
+                width: 100%;
+                border: 1px solid #ddd;
+                border-radius: 6px;
+                padding: 8px;
+                font-size: 0.88rem;
+                font-family: inherit;
+                resize: vertical;
+                margin-top: 6px;
+            }
+            #ia-progress-bar-wrap {
+                background: #eee;
+                border-radius: 20px;
+                height: 8px;
+                margin: 10px 0;
+                overflow: hidden;
+                display: none;
+            }
+            #ia-progress-bar {
+                height: 100%;
+                background: linear-gradient(135deg, #667eea, #764ba2);
+                border-radius: 20px;
+                transition: width 0.4s;
+                width: 0%;
+            }
+            .tab-content {
+                display: none;
+            }
+            .tab-content.active {
+                display: block;
+            }
+
+            /* CARDS */
+            .card {
+                background: #fff;
+                border-radius: 12px;
+                padding: 24px;
+                box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+                margin-bottom: 16px;
+            }
+            .card h2 {
+                font-size: 1rem;
+                color: var(--dark);
+                margin-bottom: 16px;
+                padding-bottom: 10px;
+                border-bottom: 2px solid var(--gray);
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+
+            /* QR */
+            #qr-area {
+                text-align: center;
+            }
+            #qr-area img {
+                width: 260px;
+                border-radius: 12px;
+                margin: 14px 0;
+                box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+            }
+            #qr-area p {
+                color: var(--muted);
+                font-size: 0.88rem;
+            }
+            .qr-steps {
+                display: flex;
+                gap: 12px;
+                justify-content: center;
+                flex-wrap: wrap;
+                margin-top: 10px;
+            }
+            .qr-step {
+                background: var(--gray);
+                border-radius: 8px;
+                padding: 8px 14px;
+                font-size: 0.8rem;
+                color: var(--dark);
+            }
+            #user-info {
+                display: none;
+                text-align: center;
+            }
+            .avatar {
+                width: 52px;
+                height: 52px;
+                border-radius: 50%;
+                background: var(--green);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 1.5rem;
+                margin: 0 auto 8px;
+            }
+
+            /* FORM */
+            .form-row {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 12px;
+                margin-bottom: 12px;
+            }
+            @media (max-width: 600px) {
+                .form-row {
+                    grid-template-columns: 1fr;
+                }
+            }
+            label {
+                display: block;
+                font-size: 0.82rem;
+                color: var(--muted);
+                margin-bottom: 4px;
+                font-weight: 500;
+            }
+            input,
+            textarea,
+            select {
+                width: 100%;
+                padding: 9px 13px;
+                border: 1.5px solid #ddd;
+                border-radius: 8px;
+                font-size: 0.95rem;
+                font-family: inherit;
+                transition: border 0.2s;
+                outline: none;
+            }
+            input:focus,
+            textarea:focus {
+                border-color: var(--green);
+            }
+            textarea {
+                resize: vertical;
+                min-height: 72px;
+            }
+
+            /* BUTTONS */
+            .btn {
+                padding: 9px 18px;
+                border: none;
+                border-radius: 8px;
+                font-size: 0.9rem;
+                font-weight: 600;
+                cursor: pointer;
+                transition:
+                    opacity 0.2s,
+                    transform 0.1s;
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+            }
+            .btn:active {
+                transform: scale(0.97);
+            }
+            .btn:disabled {
+                opacity: 0.45;
+                cursor: not-allowed;
+            }
+            .btn-green {
+                background: var(--green);
+                color: #fff;
+            }
+            .btn-blue {
+                background: var(--blue);
+                color: #fff;
+            }
+            .btn-red {
+                background: var(--red);
+                color: #fff;
+            }
+            .btn-gray {
+                background: #e0e0e0;
+                color: #333;
+            }
+            .btn-sm {
+                padding: 5px 12px;
+                font-size: 0.82rem;
+            }
+
+            /* TABLE */
+            .table-wrap {
+                overflow-x: auto;
+            }
+            table {
+                width: 100%;
+                border-collapse: collapse;
+                font-size: 0.88rem;
+            }
+            th {
+                background: var(--gray);
+                color: var(--muted);
+                padding: 10px 12px;
+                text-align: left;
+                font-weight: 600;
+                white-space: nowrap;
+            }
+            td {
+                padding: 10px 12px;
+                border-bottom: 1px solid #f0f0f0;
+                vertical-align: middle;
+            }
+            tr:hover td {
+                background: #fafafa;
+            }
+            .badge {
+                display: inline-block;
+                padding: 2px 10px;
+                border-radius: 12px;
+                font-size: 0.78rem;
+                font-weight: 600;
+            }
+            .badge-ok {
+                background: #d4edda;
+                color: #155724;
+            }
+            .badge-err {
+                background: #f8d7da;
+                color: #721c24;
+            }
+            .badge-wait {
+                background: #fff3cd;
+                color: #856404;
+            }
+            .badge-new {
+                background: #cce5ff;
+                color: #004085;
+            }
+
+            /* SEARCH */
+            .search-bar {
+                display: flex;
+                gap: 10px;
+                margin-bottom: 14px;
+                flex-wrap: wrap;
+            }
+            .search-bar input {
+                flex: 1;
+                min-width: 160px;
+            }
+
+            /* CHECKBOXES */
+            input[type='checkbox'] {
+                width: 16px;
+                height: 16px;
+                accent-color: var(--green);
+                cursor: pointer;
+            }
+
+            /* PROGRESS */
+            #progress-section {
+                display: none;
+            }
+            .progress-bar-wrap {
+                background: #eee;
+                border-radius: 20px;
+                height: 10px;
+                margin: 10px 0;
+                overflow: hidden;
+            }
+            .progress-bar {
+                height: 100%;
+                background: var(--green);
+                border-radius: 20px;
+                transition: width 0.4s;
+                width: 0%;
+            }
+            #progress-text {
+                font-size: 0.82rem;
+                color: var(--muted);
+            }
+
+            /* LOG */
+            #log {
+                background: #1a1a2e;
+                color: #a8e6cf;
+                border-radius: 8px;
+                padding: 14px;
+                font-family: monospace;
+                font-size: 0.8rem;
+                max-height: 200px;
+                overflow-y: auto;
+                margin-top: 12px;
+                white-space: pre-wrap;
+            }
+            .log-ok {
+                color: #a8e6cf;
+            }
+            .log-err {
+                color: #ff6b6b;
+            }
+            .log-inf {
+                color: #ffd93d;
+            }
+
+            /* DELAY */
+            .delay-row {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                flex-wrap: wrap;
+            }
+            .delay-row input[type='range'] {
+                flex: 1;
+                accent-color: var(--green);
+            }
+            .delay-row span {
+                min-width: 36px;
+                font-weight: 700;
+                color: var(--dark);
+            }
+
+            /* TAGS */
+            .tag-list {
+                display: flex;
+                gap: 6px;
+                flex-wrap: wrap;
+                margin-top: 6px;
+            }
+            .tag {
+                background: var(--light);
+                color: var(--dark);
+                padding: 2px 10px;
+                border-radius: 20px;
+                font-size: 0.78rem;
+                cursor: pointer;
+                border: 1px solid var(--green);
+            }
+            .tag:hover {
+                background: var(--green);
+                color: #fff;
+            }
+
+            /* HINT */
+            .hint {
+                background: #f8f9fa;
+                border: 1px dashed #ccc;
+                border-radius: 8px;
+                padding: 10px 14px;
+                font-size: 0.82rem;
+                color: var(--muted);
+                margin-top: 8px;
+            }
+            .hint code {
+                background: #eee;
+                padding: 1px 5px;
+                border-radius: 4px;
+            }
+
+            /* MODAL */
+            .modal-bg {
+                display: none;
+                position: fixed;
+                inset: 0;
+                background: rgba(0, 0, 0, 0.5);
+                z-index: 100;
+                align-items: center;
+                justify-content: center;
+            }
+            .modal-bg.open {
+                display: flex;
+            }
+            .modal {
+                background: #fff;
+                border-radius: 12px;
+                padding: 28px;
+                width: 90%;
+                max-width: 460px;
+                box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            }
+            .modal h3 {
+                margin-bottom: 16px;
+                color: var(--dark);
+            }
+            .modal-footer {
+                display: flex;
+                gap: 10px;
+                justify-content: flex-end;
+                margin-top: 16px;
+            }
+
+            /* HISTORICO */
+            .hist-item {
+                padding: 8px 0;
+                border-bottom: 1px solid #f0f0f0;
+                font-size: 0.85rem;
+            }
+            .hist-item:last-child {
+                border: none;
+            }
+        </style>
+    </head>
+    <body>
+        <header>
+            <h1>💬 WhatsApp Sender</h1>
+            <span id="conn-badge" class="disconnected">● Desconectado</span>
+        </header>
+
+        <!-- STATS -->
+        <div class="stats-bar">
+            <div class="stat">
+                👥 Contatos: <strong id="st-contatos">—</strong>
+            </div>
+            <div class="stat">📤 Enviados: <strong id="st-ok">—</strong></div>
+            <div class="stat">❌ Falhas: <strong id="st-err">—</strong></div>
+        </div>
+
+        <div id="status-bar" class="info">⏳ Conectando ao WhatsApp...</div>
+
+        <main>
+            <!-- QR -->
+            <div class="card" id="qr-card">
+                <h2>📱 Conexão WhatsApp</h2>
+                <!-- ESTADO: carregando / autenticando -->
+                <div id="qr-loading" style="text-align: center; padding: 16px">
+                    <div
+                        id="qr-loading-icon"
+                        style="font-size: 2.5rem; margin-bottom: 12px"
+                    >
+                        📱
+                    </div>
+                    <p
+                        id="qr-loading-title"
+                        style="
+                            font-weight: 600;
+                            color: var(--dark);
+                            margin-bottom: 6px;
+                        "
+                    >
+                        Iniciando WhatsApp...
+                    </p>
+                    <p
+                        id="qr-substatus"
+                        style="color: var(--muted); font-size: 0.85rem"
+                    >
+                        Abrindo Chrome, aguarde ~30 segundos
+                    </p>
+                    <div
+                        style="
+                            margin-top: 14px;
+                            display: flex;
+                            gap: 6px;
+                            justify-content: center;
+                        "
+                    >
+                        <span class="dot-anim" style="animation-delay: 0s"
+                            >●</span
+                        >
+                        <span class="dot-anim" style="animation-delay: 0.3s"
+                            >●</span
+                        >
+                        <span class="dot-anim" style="animation-delay: 0.6s"
+                            >●</span
+                        >
+                    </div>
+                    <!-- Botão de emergência — aparece se autenticando por mais de 30s sem ready -->
+                    <div
+                        id="auth-timeout-warn"
+                        style="
+                            display: none;
+                            margin-top: 18px;
+                            padding: 12px 16px;
+                            background: #fff3cd;
+                            border-radius: 8px;
+                            font-size: 0.85rem;
+                            color: #856404;
+                        "
+                    >
+                        ⚠️ Sessão demorando para ativar. Se persistir, limpe a
+                        sessão:
+                        <br /><button
+                            class="btn btn-red btn-sm"
+                            style="margin-top: 8px"
+                            onclick="clearSession()"
+                        >
+                            🗑️ Limpar sessão e reconectar
+                        </button>
+                    </div>
+                </div>
+
+                <!-- ESTADO: QR Code -->
+                <div
+                    id="qr-area"
+                    style="display: none; text-align: center; padding: 16px"
+                >
+                    <img
+                        id="qr-img"
+                        src=""
+                        alt="QR Code"
+                        style="
+                            width: 280px;
+                            border-radius: 12px;
+                            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+                            margin-bottom: 12px;
+                            cursor: pointer;
+                        "
+                        onclick="refreshQR()"
+                        title="Clique para atualizar"
+                    />
+                    <p
+                        style="
+                            font-weight: 600;
+                            color: var(--dark);
+                            margin-bottom: 6px;
+                        "
+                    >
+                        📷 Escaneie com o WhatsApp
+                    </p>
+                    <p
+                        style="
+                            font-size: 0.8rem;
+                            color: var(--muted);
+                            margin-bottom: 10px;
+                        "
+                    >
+                        Clique na imagem se o QR expirar
+                    </p>
+                    <div class="qr-steps">
+                        <span class="qr-step">1️⃣ Abra o WhatsApp</span>
+                        <span class="qr-step">2️⃣ Dispositivos conectados</span>
+                        <span class="qr-step">3️⃣ Conectar dispositivo</span>
+                        <span class="qr-step">4️⃣ Aponte a câmera aqui</span>
+                    </div>
+                </div>
+
+                <!-- ESTADO: Conectado -->
+                <div
+                    id="user-info"
+                    style="display: none; text-align: center; padding: 16px"
+                >
+                    <div class="avatar">👤</div>
+                    <strong
+                        id="user-name"
+                        style="
+                            display: block;
+                            font-size: 1.1rem;
+                            margin-bottom: 4px;
+                        "
+                        >—</strong
+                    >
+                    <p
+                        id="user-number"
+                        style="
+                            color: var(--muted);
+                            font-size: 0.88rem;
+                            margin-bottom: 14px;
+                        "
+                    ></p>
+                    <button class="btn btn-red btn-sm" onclick="logout()">
+                        🔌 Deslogar WhatsApp
+                    </button>
+                </div>
+            </div>
+
+            <!-- ABAS -->
+            <div>
+                <div class="tabs">
+                    <div class="tab active" onclick="showTab('tab-contatos')">
+                        👥 Contatos
+                    </div>
+                    <div class="tab" onclick="showTab('tab-add')">
+                        ➕ Adicionar
+                    </div>
+                    <div class="tab" onclick="showTab('tab-bot')">🤖 Bot</div>
+                    <div class="tab" onclick="showTab('tab-send')">
+                        🚀 Enviar
+                    </div>
+                </div>
+
+                <!-- ABA: CONTATOS -->
+                <div id="tab-contatos" class="tab-content active">
+                    <div class="card">
+                        <h2>👥 Contatos Salvos</h2>
+                        <div class="search-bar">
+                            <input
+                                id="search"
+                                type="text"
+                                placeholder="🔍 Buscar por nome ou número..."
+                                oninput="filtrarTabela()"
+                            />
+                            <button
+                                class="btn btn-gray btn-sm"
+                                onclick="loadContatos()"
+                            >
+                                🔄 Atualizar
+                            </button>
+                            <button
+                                class="btn btn-red btn-sm"
+                                onclick="removerSelecionados()"
+                            >
+                                🗑️ Remover selecionados
+                            </button>
+                        </div>
+                        <div class="table-wrap">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>
+                                            <input
+                                                type="checkbox"
+                                                id="check-all"
+                                                onchange="toggleAll(this)"
+                                            />
+                                        </th>
+                                        <th>#</th>
+                                        <th>Nome</th>
+                                        <th>Número</th>
+                                        <th>Envios</th>
+                                        <th>Último envio</th>
+                                        <th>Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbody-contatos">
+                                    <tr>
+                                        <td
+                                            colspan="7"
+                                            style="
+                                                text-align: center;
+                                                padding: 24px;
+                                                color: var(--muted);
+                                            "
+                                        >
+                                            Carregando...
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ABA: ADICIONAR -->
+                <div id="tab-add" class="tab-content">
+                    <div class="card">
+                        <h2>➕ Adicionar Contato</h2>
+                        <div class="form-row">
+                            <div>
+                                <label>Nome</label>
+                                <input
+                                    id="inp-nome"
+                                    type="text"
+                                    placeholder="Ex: João Silva"
+                                />
+                            </div>
+                            <div>
+                                <label>Número (com DDD)</label>
+                                <input
+                                    id="inp-numero"
+                                    type="text"
+                                    placeholder="Ex: 11999998888"
+                                />
+                            </div>
+                        </div>
+                        <div
+                            id="add-feedback"
+                            style="display: none; margin-bottom: 12px"
+                        ></div>
+                        <button class="btn btn-green" onclick="addContato()">
+                            ➕ Salvar contato
+                        </button>
+                    </div>
+
+                    <div class="card">
+                        <h2>📂 Importar clients.csv</h2>
+                        <p
+                            style="
+                                font-size: 0.88rem;
+                                color: var(--muted);
+                                margin-bottom: 14px;
+                            "
+                        >
+                            O arquivo
+                            <code
+                                style="
+                                    background: #eee;
+                                    padding: 1px 6px;
+                                    border-radius: 4px;
+                                "
+                                >clients.csv</code
+                            >
+                            na raiz do projeto é lido automaticamente, os
+                            números são normalizados e duplicatas são ignoradas.
+                        </p>
+                        <button
+                            class="btn btn-blue"
+                            onclick="previewCSV()"
+                            id="btn-preview"
+                        >
+                            🔍 Pré-visualizar CSV
+                        </button>
+                        <button
+                            class="btn btn-green"
+                            onclick="importarCSVAuto()"
+                            id="btn-import-auto"
+                            style="margin-left: 8px"
+                        >
+                            ⬆️ Importar para o banco
+                        </button>
+                        <div
+                            id="csv-preview-wrap"
+                            style="display: none; margin-top: 16px"
+                        >
+                            <div
+                                id="csv-stats"
+                                style="margin-bottom: 10px"
+                            ></div>
+                            <div
+                                class="table-wrap"
+                                style="max-height: 280px; overflow-y: auto"
+                            >
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>#</th>
+                                            <th>Nome</th>
+                                            <th>Número</th>
+                                            <th>Nota</th>
+                                            <th>Aniversário</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="csv-preview-tbody"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div
+                            id="import-feedback"
+                            style="display: none; margin-top: 12px"
+                        ></div>
+                    </div>
+
+                    <div class="card">
+                        <h2>📂 Importar outro CSV</h2>
+                        <p
+                            style="
+                                font-size: 0.88rem;
+                                color: var(--muted);
+                                margin-bottom: 12px;
+                            "
+                        >
+                            Formato:
+                            <code
+                                style="
+                                    background: #eee;
+                                    padding: 1px 6px;
+                                    border-radius: 4px;
+                                "
+                                >nome,numero</code
+                            >
+                            ou
+                            <code
+                                style="
+                                    background: #eee;
+                                    padding: 1px 6px;
+                                    border-radius: 4px;
+                                "
+                                >nome,numero,mensagem</code
+                            >
+                        </p>
+                        <button
+                            class="btn btn-gray"
+                            onclick="
+                                document.getElementById('csv-input').click()
+                            "
+                        >
+                            📁 Selecionar arquivo
+                        </button>
+                        <input
+                            type="file"
+                            id="csv-input"
+                            accept=".csv"
+                            style="display: none"
+                            onchange="importCSV(event)"
+                        />
+                        <div
+                            id="import2-feedback"
+                            style="display: none; margin-top: 12px"
+                        ></div>
+                    </div>
+                </div>
+
+                <!-- ABA: BOT -->
+                <div id="tab-bot" class="tab-content">
+                    <!-- CARD: Status do Bot -->
+                    <div class="card">
+                        <h2>🤖 Bot de Atendimento</h2>
+                        <p
+                            style="
+                                font-size: 0.88rem;
+                                color: var(--muted);
+                                margin-bottom: 14px;
+                            "
+                        >
+                            Quando ativado, o bot responde automaticamente às
+                            mensagens recebidas dos pacientes com um menu de
+                            opções.
+                        </p>
+                        <div
+                            style="
+                                display: flex;
+                                align-items: center;
+                                gap: 14px;
+                                flex-wrap: wrap;
+                            "
+                        >
+                            <label
+                                style="
+                                    display: flex;
+                                    align-items: center;
+                                    gap: 8px;
+                                    cursor: pointer;
+                                    font-size: 0.95rem;
+                                "
+                            >
+                                <input
+                                    type="checkbox"
+                                    id="bot-enabled"
+                                    onchange="salvarBotConfig()"
+                                    style="width: 18px; height: 18px"
+                                />
+                                Bot ativo
+                            </label>
+                            <button
+                                class="btn btn-gray btn-sm"
+                                onclick="carregarBotConfig()"
+                            >
+                                🔄 Recarregar configuração
+                            </button>
+                        </div>
+                        <div
+                            id="bot-saved-feedback"
+                            style="
+                                display: none;
+                                margin-top: 10px;
+                                font-size: 0.85rem;
+                                color: var(--green);
+                            "
+                        ></div>
+                    </div>
+
+                    <!-- CARD: Saudação -->
+                    <div class="card">
+                        <h2>👋 Mensagem de Saudação</h2>
+                        <p
+                            style="
+                                font-size: 0.85rem;
+                                color: var(--muted);
+                                margin-bottom: 8px;
+                            "
+                        >
+                            Mensagem enviada quando um novo paciente entra em
+                            contato.
+                        </p>
+                        <textarea
+                            id="bot-greeting"
+                            style="min-height: 80px"
+                            onchange="salvarBotConfig()"
+                            placeholder="Olá! Bem-vindo(a)..."
+                        ></textarea>
+                    </div>
+
+                    <!-- CARD: Opções do Menu -->
+                    <div class="card">
+                        <h2>📋 Opções do Menu</h2>
+                        <p
+                            style="
+                                font-size: 0.85rem;
+                                color: var(--muted);
+                                margin-bottom: 12px;
+                            "
+                        >
+                            Personalize o texto de cada opção. Para adicionar
+                            novas ações no futuro, edite o arquivo
+                            <code
+                                style="
+                                    background: #eee;
+                                    padding: 1px 5px;
+                                    border-radius: 3px;
+                                "
+                                >bot.js</code
+                            >.
+                        </p>
+                        <div id="menu-options-editor">
+                            <div
+                                style="
+                                    display: grid;
+                                    grid-template-columns: 40px 1fr;
+                                    gap: 8px;
+                                    align-items: center;
+                                    padding-bottom: 8px;
+                                    border-bottom: 1px solid var(--border);
+                                    margin-bottom: 8px;
+                                    font-size: 0.82rem;
+                                    color: var(--muted);
+                                    font-weight: 600;
+                                "
+                            >
+                                <span>#</span><span>Texto da opção</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CARD: Informações da Clínica -->
+                    <div class="card">
+                        <h2>🏪 Informações da Clínica</h2>
+                        <div style="display: grid; gap: 14px">
+                            <div>
+                                <label>🔗 Link para agendamento</label>
+                                <input
+                                    id="bot-scheduling-link"
+                                    type="text"
+                                    placeholder="https://..."
+                                    onchange="salvarBotConfig()"
+                                />
+                            </div>
+                            <div>
+                                <label>📍 Endereço</label>
+                                <textarea
+                                    id="bot-address"
+                                    style="min-height: 60px"
+                                    onchange="salvarBotConfig()"
+                                    placeholder="Rua Exemplo, 123 - Centro..."
+                                ></textarea>
+                            </div>
+                            <div>
+                                <label>🏥 Planos de saúde (um por linha)</label>
+                                <textarea
+                                    id="bot-plans"
+                                    style="min-height: 60px"
+                                    onchange="salvarBotConfig()"
+                                    placeholder="Plano Básico&#10;Plano Premium&#10;Plano Empresarial"
+                                ></textarea>
+                            </div>
+                            <div>
+                                <label>📞 Contato do profissional</label>
+                                <input
+                                    id="bot-professional-contact"
+                                    type="text"
+                                    placeholder="(11) 99999-8888"
+                                    onchange="salvarBotConfig()"
+                                />
+                            </div>
+                        </div>
+                        <button
+                            class="btn btn-green"
+                            onclick="salvarBotConfig()"
+                            style="margin-top: 14px"
+                        >
+                            💾 Salvar configuração
+                        </button>
+                    </div>
+
+                    <!-- CARD: Conversas Ativas -->
+                    <div class="card">
+                        <h2>💬 Conversas Ativas</h2>
+                        <p
+                            style="
+                                font-size: 0.85rem;
+                                color: var(--muted);
+                                margin-bottom: 10px;
+                            "
+                        >
+                            Pacientes que estão conversando com o bot no
+                            momento.
+                        </p>
+                        <div
+                            id="bot-conversations-wrap"
+                            style="font-size: 0.85rem"
+                        >
+                            <p style="color: var(--muted)">
+                                Nenhuma conversa ativa no momento.
+                            </p>
+                        </div>
+                        <button
+                            class="btn btn-red btn-sm"
+                            onclick="resetarTodasConversas()"
+                            style="margin-top: 10px"
+                        >
+                            🔄 Resetar todas as conversas
+                        </button>
+                    </div>
+
+                    <!-- CARD: Gerar template com IA (funcionalidade original) -->
+                    <div class="card" style="border-left: 3px solid #667eea">
+                        <h2>
+                            ✉️ Gerar template de mensagem com IA
+                            <span class="ia-badge">Groq</span>
+                        </h2>
+                        <details style="margin-top: 10px">
+                            <summary
+                                style="
+                                    cursor: pointer;
+                                    font-size: 0.9rem;
+                                    color: var(--blue);
+                                    font-weight: 600;
+                                "
+                            >
+                                ▶️ Abrir gerador de template
+                            </summary>
+                            <div
+                                style="
+                                    margin-top: 14px;
+                                    background: #f0fff4;
+                                    border: 1px solid #b7ebc4;
+                                    border-radius: 8px;
+                                    padding: 12px 16px;
+                                    margin-bottom: 16px;
+                                    font-size: 0.87rem;
+                                    color: #1a6b30;
+                                "
+                            >
+                                💡 <strong>1 chamada à IA</strong> gera um
+                                template com
+                                <code
+                                    style="
+                                        background: #d4edda;
+                                        padding: 1px 5px;
+                                        border-radius: 3px;
+                                    "
+                                    >{nome}</code
+                                >
+                                — aplicado para todos os pacientes selecionados.
+                                Rápido e econômico!
+                            </div>
+                            <label>📝 Objetivo da mensagem</label>
+                            <textarea
+                                id="ia-contexto"
+                                style="margin-top: 6px; min-height: 90px"
+                                placeholder="Ex: Lembrar os pacientes sobre a consulta de revisão semestral. Informar que temos horários disponíveis esta semana. Reforçar a importância da prevenção bucal."
+                            ></textarea>
+                            <div style="margin-top: 12px">
+                                <button
+                                    class="btn btn-blue"
+                                    id="btn-gerar-ia"
+                                    onclick="gerarComIA()"
+                                    style="font-size: 1rem; padding: 12px 28px"
+                                >
+                                    ✨ Gerar template com IA
+                                </button>
+                            </div>
+                            <div
+                                id="ia-progress-bar-wrap"
+                                style="margin-top: 12px"
+                            >
+                                <div id="ia-progress-bar"></div>
+                            </div>
+                            <p
+                                id="ia-progress-text"
+                                style="
+                                    font-size: 0.85rem;
+                                    color: var(--muted);
+                                    margin-top: 6px;
+                                "
+                            ></p>
+
+                            <div
+                                class="card"
+                                id="ia-template-card"
+                                style="
+                                    display: none;
+                                    margin-top: 14px;
+                                    padding: 16px;
+                                "
+                            >
+                                <h2>✏️ Template gerado — edite se quiser</h2>
+                                <p
+                                    style="
+                                        font-size: 0.85rem;
+                                        color: var(--muted);
+                                        margin-bottom: 10px;
+                                    "
+                                >
+                                    <code
+                                        style="
+                                            background: #eee;
+                                            padding: 1px 6px;
+                                            border-radius: 4px;
+                                        "
+                                        >{nome}</code
+                                    >
+                                    será substituído pelo primeiro nome de cada
+                                    paciente.
+                                </p>
+                                <textarea
+                                    id="ia-template"
+                                    style="
+                                        min-height: 130px;
+                                        font-size: 0.95rem;
+                                        border: 2px solid var(--green);
+                                    "
+                                    oninput="atualizarPreview()"
+                                ></textarea>
+                                <div
+                                    style="
+                                        margin-top: 10px;
+                                        background: #f0fff4;
+                                        border-left: 3px solid var(--green);
+                                        padding: 10px 14px;
+                                        border-radius: 6px;
+                                    "
+                                >
+                                    <p
+                                        style="
+                                            font-size: 0.8rem;
+                                            color: var(--muted);
+                                            margin-bottom: 4px;
+                                        "
+                                    >
+                                        👁️ Preview:
+                                    </p>
+                                    <div
+                                        id="ia-preview-exemplo"
+                                        style="
+                                            font-size: 0.9rem;
+                                            white-space: pre-wrap;
+                                            color: var(--text);
+                                        "
+                                    ></div>
+                                </div>
+                            </div>
+
+                            <div
+                                class="card"
+                                id="ia-select-card"
+                                style="
+                                    display: none;
+                                    margin-top: 14px;
+                                    padding: 16px;
+                                "
+                            >
+                                <h2>🎯 Selecionar pacientes</h2>
+                                <div
+                                    style="
+                                        display: flex;
+                                        gap: 10px;
+                                        margin-bottom: 12px;
+                                        flex-wrap: wrap;
+                                        align-items: center;
+                                    "
+                                >
+                                    <button
+                                        class="btn btn-gray btn-sm"
+                                        onclick="selecionarTodosIA()"
+                                    >
+                                        ✅ Todos
+                                    </button>
+                                    <button
+                                        class="btn btn-gray btn-sm"
+                                        onclick="deselecionarTodosIA()"
+                                    >
+                                        ⬜ Nenhum
+                                    </button>
+                                    <span
+                                        id="ia-sel-count"
+                                        style="
+                                            font-size: 0.88rem;
+                                            color: var(--muted);
+                                        "
+                                        >0 selecionados</span
+                                    >
+                                </div>
+                                <div
+                                    class="table-wrap"
+                                    style="max-height: 260px; overflow-y: auto"
+                                >
+                                    <table>
+                                        <thead>
+                                            <tr>
+                                                <th>
+                                                    <input
+                                                        type="checkbox"
+                                                        id="ia-check-all"
+                                                        onchange="
+                                                            toggleIAAll(this)
+                                                        "
+                                                    />
+                                                </th>
+                                                <th>Nome</th>
+                                                <th>Número</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="tbody-ia"></tbody>
+                                    </table>
+                                </div>
+                                <div
+                                    style="
+                                        margin-top: 16px;
+                                        display: flex;
+                                        gap: 10px;
+                                        flex-wrap: wrap;
+                                    "
+                                >
+                                    <button
+                                        class="btn btn-green"
+                                        onclick="enviarMensagensIA()"
+                                        style="
+                                            font-size: 1rem;
+                                            padding: 13px 28px;
+                                        "
+                                    >
+                                        🚀 Enviar para selecionados
+                                    </button>
+                                    <button
+                                        class="btn btn-gray"
+                                        onclick="resetIA()"
+                                    >
+                                        ↩️ Gerar novo template
+                                    </button>
+                                </div>
+                            </div>
+                        </details>
+                    </div>
+                </div>
+
+                <!-- ABA: ENVIAR -->
+                <div id="tab-send" class="tab-content">
+                    <div class="card">
+                        <h2>✉️ Mensagem</h2>
+                        <label
+                            >Mensagem padrão (usada quando o contato não tem
+                            mensagem própria)</label
+                        >
+                        <textarea
+                            id="msg-padrao"
+                            style="margin-top: 6px"
+                            placeholder="Olá {nome}! Temos novidades para você 🎉"
+                        >
+Olá {nome}! Temos novidades para você 🎉</textarea
+                        >
+                        <div class="tag-list">
+                            <span
+                                style="
+                                    font-size: 0.8rem;
+                                    color: var(--muted);
+                                    align-self: center;
+                                "
+                                >Variáveis:</span
+                            >
+                            <span class="tag" onclick="insertVar('{nome}')"
+                                >👤 {nome}</span
+                            >
+                            <span class="tag" onclick="insertVar('{numero}')"
+                                >📞 {numero}</span
+                            >
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h2>🖼️ Imagem (opcional)</h2>
+                        <p
+                            style="
+                                font-size: 0.85rem;
+                                color: var(--muted);
+                                margin-bottom: 10px;
+                            "
+                        >
+                            A imagem será enviada junto com a mensagem para
+                            todos os selecionados.
+                        </p>
+                        <input
+                            type="file"
+                            id="img-input"
+                            accept="image/*"
+                            onchange="previewImagem(event)"
+                            style="margin-bottom: 8px"
+                        />
+                        <div
+                            id="img-preview"
+                            style="
+                                display: none;
+                                margin-top: 8px;
+                                position: relative;
+                            "
+                        >
+                            <img
+                                id="img-preview-src"
+                                style="
+                                    max-width: 180px;
+                                    max-height: 180px;
+                                    border-radius: 8px;
+                                    border: 2px solid var(--border);
+                                    display: block;
+                                "
+                            />
+                            <button
+                                class="btn btn-red btn-sm"
+                                onclick="removerImagem()"
+                                style="margin-top: 6px"
+                            >
+                                ✕ Remover imagem
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h2>⚙️ Configurações</h2>
+                        <label>⏱️ Delay entre mensagens</label>
+                        <div class="delay-row" style="margin-top: 6px">
+                            <input
+                                type="range"
+                                id="delay-range"
+                                min="3000"
+                                max="30000"
+                                step="1000"
+                                value="5000"
+                                oninput="
+                                    document.getElementById(
+                                        'delay-val',
+                                    ).textContent = this.value / 1000 + 's'
+                                "
+                            />
+                            <span id="delay-val">5s</span>
+                        </div>
+                        <p
+                            style="
+                                font-size: 0.8rem;
+                                color: var(--muted);
+                                margin-top: 4px;
+                            "
+                        >
+                            Mínimo recomendado: 5s para evitar bloqueio
+                        </p>
+                    </div>
+
+                    <div class="card">
+                        <h2
+                            style="cursor: pointer; user-select: none"
+                            onclick="toggleDestinatarios()"
+                        >
+                            🎯 Selecionar Destinatários
+                            <span
+                                id="dest-toggle-icon"
+                                style="
+                                    margin-left: auto;
+                                    font-size: 0.85rem;
+                                    color: var(--muted);
+                                "
+                                >▼ expandir</span
+                            >
+                        </h2>
+                        <div id="dest-body" style="display: none">
+                            <div class="search-bar">
+                                <input
+                                    id="search-send"
+                                    type="text"
+                                    placeholder="🔍 Buscar por nome ou número..."
+                                    oninput="filtrarSendList()"
+                                />
+                            </div>
+                            <div
+                                style="
+                                    display: flex;
+                                    gap: 10px;
+                                    margin-bottom: 14px;
+                                    flex-wrap: wrap;
+                                "
+                            >
+                                <button
+                                    class="btn btn-gray btn-sm"
+                                    onclick="selecionarTodos()"
+                                >
+                                    ✅ Todos
+                                </button>
+                                <button
+                                    class="btn btn-gray btn-sm"
+                                    onclick="deselecionarTodos()"
+                                >
+                                    ⬜ Nenhum
+                                </button>
+                                <span
+                                    id="sel-count"
+                                    style="
+                                        align-self: center;
+                                        font-size: 0.88rem;
+                                        color: var(--muted);
+                                    "
+                                    >0 selecionados</span
+                                >
+                            </div>
+                            <div class="table-wrap">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>
+                                                <input
+                                                    type="checkbox"
+                                                    id="send-check-all"
+                                                    onchange="
+                                                        toggleSendAll(this)
+                                                    "
+                                                />
+                                            </th>
+                                            <th>Nome</th>
+                                            <th>Número</th>
+                                            <th>Último envio</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tbody-send">
+                                        <tr>
+                                            <td
+                                                colspan="4"
+                                                style="
+                                                    text-align: center;
+                                                    padding: 20px;
+                                                    color: var(--muted);
+                                                "
+                                            >
+                                                Carregando...
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <button
+                            class="btn btn-green"
+                            id="btn-send"
+                            onclick="sendAll()"
+                            style="
+                                font-size: 1rem;
+                                padding: 13px 28px;
+                                width: 100%;
+                            "
+                        >
+                            🚀 Enviar para selecionados
+                        </button>
+                    </div>
+
+                    <div class="card" id="progress-section">
+                        <h2>📊 Progresso</h2>
+                        <div class="progress-bar-wrap">
+                            <div class="progress-bar" id="progress-bar"></div>
+                        </div>
+                        <p id="progress-text">0 / 0</p>
+                        <div id="log">> Aguardando...</div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- MODAL EDITAR -->
+        <div class="modal-bg" id="modal-edit">
+            <div class="modal">
+                <h3>✏️ Editar Contato</h3>
+                <input type="hidden" id="edit-id" />
+                <label>Nome</label>
+                <input id="edit-nome" type="text" style="margin-top: 4px" />
+                <div class="modal-footer">
+                    <button class="btn btn-gray" onclick="closeModal()">
+                        Cancelar
+                    </button>
+                    <button class="btn btn-green" onclick="salvarEdicao()">
+                        Salvar
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- MODAL HISTÓRICO -->
+        <div class="modal-bg" id="modal-hist">
+            <div class="modal" style="max-width: 520px">
+                <h3>📋 Histórico de Envios</h3>
+                <div
+                    id="hist-content"
+                    style="
+                        max-height: 320px;
+                        overflow-y: auto;
+                        margin-top: 12px;
+                    "
+                ></div>
+                <div class="modal-footer">
+                    <button class="btn btn-gray" onclick="closeModal()">
+                        Fechar
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <script src="/socket.io/socket.io.js"></script>
+        <script>
+            // ─── ESTADO ──────────────────────────────────────────────────
+            let contatosDB = [];
+            let isReady = false;
+            const socket = io();
+            const selectedSendIds = new Set(); // preserva seleção entre filtros
+
+            // ─── SOCKET ──────────────────────────────────────────────────
+            let qrPolling = null;
+            let authTimeoutId = null; // timer para mostrar aviso de autenticação presa
+
+            function startQRPolling() {
+                if (qrPolling) return;
+                qrPolling = setInterval(async () => {
+                    if (isReady) {
+                        stopQRPolling();
+                        return;
+                    }
+                    try {
+                        const res = await fetch('/api/qr');
+                        if (res.status === 204) {
+                            stopQRPolling();
+                            return;
+                        } // conectado
+                        if (res.status === 202) return; // ainda gerando
+
+                        stopQRPolling();
+                        showEstado('qr');
+                        refreshQR();
+                    } catch (e) {}
+                }, 2000);
+            }
+
+            function stopQRPolling() {
+                clearInterval(qrPolling);
+                qrPolling = null;
+            }
+
+            function startAuthTimeout() {
+                clearAuthTimeout();
+                // Se após 35s ainda não tivermos ready, mostra aviso de sessão presa
+                authTimeoutId = setTimeout(() => {
+                    const warn = document.getElementById('auth-timeout-warn');
+                    if (warn && !isReady) warn.style.display = 'block';
+                }, 35000);
+            }
+
+            function clearAuthTimeout() {
+                clearTimeout(authTimeoutId);
+                authTimeoutId = null;
+                const warn = document.getElementById('auth-timeout-warn');
+                if (warn) warn.style.display = 'none';
+            }
+
+            async function clearSession() {
+                if (
+                    !confirm(
+                        'Isso vai apagar a sessão salva do WhatsApp. Você precisará escanear o QR Code novamente. Confirma?',
+                    )
+                )
+                    return;
+                try {
+                    await fetch('/api/logout', { method: 'POST' });
+                } catch (e) {}
+                window.location.reload();
+            }
+
+            // ─── Evento: QR disponível — busca imagem via HTTP ───────────
+            socket.on('qr_disponivel', () => {
+                stopQRPolling();
+                clearAuthTimeout();
+                showEstado('qr');
+                refreshQR();
+            });
+
+            // ─── Evento: status geral ─────────────────────────────────────
+            socket.on('status', ({ type, msg, statusAtual }) => {
+                const bar = document.getElementById('status-bar');
+                bar.className = type;
+                bar.textContent = msg;
+
+                // Atualiza substatus na tela de carregamento
+                const sub = document.getElementById('qr-substatus');
+                const title = document.getElementById('qr-loading-title');
+                const icon = document.getElementById('qr-loading-icon');
+
+                if (statusAtual === 'autenticando') {
+                    if (title) title.textContent = '🔐 Sessão encontrada!';
+                    if (icon) icon.textContent = '🔐';
+                    if (sub)
+                        sub.textContent =
+                            'Verificando sessão salva... aguarde alguns segundos';
+                    showEstado('carregando');
+                    startAuthTimeout();
+                } else if (statusAtual === 'carregando') {
+                    if (title) title.textContent = 'Iniciando WhatsApp...';
+                    if (icon) icon.textContent = '📱';
+                    if (sub && !isReady) sub.textContent = msg;
+                    showEstado('carregando');
+                } else if (
+                    msg &&
+                    (msg.includes('QR') || msg.includes('escaneie'))
+                ) {
+                    stopQRPolling();
+                    clearAuthTimeout();
+                    showEstado('qr');
+                    refreshQR();
+                } else if (sub && !isReady) {
+                    if (title) title.textContent = 'Iniciando WhatsApp...';
+                    if (icon) icon.textContent = '📱';
+                    sub.textContent = msg;
+                }
+            });
+
+            // ─── Evento: ready ───────────────────────────────────────────
+            socket.on('ready', ({ name, number }) => {
+                isReady = true;
+                clearAuthTimeout();
+                stopQRPolling();
+                setBadge(name, true);
+                showEstado('conectado', { name, number });
+                document.getElementById('status-bar').className = 'success';
+                document.getElementById('status-bar').textContent =
+                    '✅ WhatsApp conectado!';
+                loadContatos();
+                loadStats();
+            });
+
+            // ─── Evento: desconectado ────────────────────────────────────
+            socket.on('disconnected', () => {
+                isReady = false;
+                clearAuthTimeout();
+                setBadge('Desconectado', false);
+                showEstado('carregando');
+                startQRPolling();
+            });
+
+            socket.on('send:start', ({ total }) => {
+                document.getElementById('progress-section').style.display =
+                    'block';
+                document.getElementById('progress-bar').style.width = '0%';
+                document.getElementById('progress-text').textContent =
+                    `0 / ${total}`;
+                document.getElementById('log').innerHTML =
+                    '> Iniciando envios...\n';
+                document.getElementById('btn-send').disabled = true;
+                document
+                    .getElementById('progress-section')
+                    .scrollIntoView({ behavior: 'smooth' });
+            });
+
+            socket.on('send:progress', ({ index, total, nome }) => {
+                const pct = Math.round((index / total) * 100);
+                document.getElementById('progress-bar').style.width = pct + '%';
+                document.getElementById('progress-text').textContent =
+                    `${index} / ${total}`;
+                appendLog(
+                    `[${index}/${total}] Enviando para ${nome}...`,
+                    'inf',
+                );
+            });
+
+            socket.on('send:item', ({ ok, nome, numero, motivo }) => {
+                ok
+                    ? appendLog(`  ✅ ${nome} (${numero})`, 'ok')
+                    : appendLog(`  ❌ ${nome} — ${motivo}`, 'err');
+            });
+
+            socket.on('send:done', ({ enviados, falhas }) => {
+                appendLog(
+                    `\n🎉 ${enviados.length} enviados | ${falhas.length} falhas`,
+                    'ok',
+                );
+                document.getElementById('btn-send').disabled = false;
+                loadStats();
+                loadContatos();
+            });
+
+            // ─── INICIALIZAÇÃO ───────────────────────────────────────────
+            window.addEventListener('DOMContentLoaded', async () => {
+                let d = {};
+                try {
+                    d = await fetchJSON('/api/status');
+                } catch (e) {}
+                if (d.db) setStats(d.db);
+
+                if (d.ready && d.info) {
+                    // ✅ Já conectado (sessão ativa)
+                    isReady = true;
+                    setBadge(d.info.name, true);
+                    showEstado('conectado', d.info);
+                    document.getElementById('status-bar').className = 'success';
+                    document.getElementById('status-bar').textContent =
+                        '✅ WhatsApp conectado!';
+                } else if (d.hasQR) {
+                    // QR gerado mas não escaneado
+                    showEstado('qr');
+                    refreshQR();
+                } else if (d.statusAtual === 'autenticando') {
+                    // 🔐 Sessão salva encontrada, aguardando ready
+                    const title = document.getElementById('qr-loading-title');
+                    const icon = document.getElementById('qr-loading-icon');
+                    const sub = document.getElementById('qr-substatus');
+                    if (title) title.textContent = '🔐 Sessão encontrada!';
+                    if (icon) icon.textContent = '🔐';
+                    if (sub)
+                        sub.textContent =
+                            'Verificando sessão salva... aguarde alguns segundos';
+                    showEstado('carregando');
+                    document.getElementById('status-bar').className = 'warning';
+                    document.getElementById('status-bar').textContent =
+                        '🔐 Autenticando sessão salva...';
+                    startAuthTimeout();
+                } else {
+                    // Ainda inicializando
+                    showEstado('carregando');
+                    startQRPolling();
+                }
+
+                loadContatos();
+
+                document
+                    .getElementById('inp-numero')
+                    .addEventListener('keydown', (e) => {
+                        if (e.key === 'Enter') addContato();
+                    });
+            });
+
+            // ─── STATS ────────────────────────────────────────────────────
+            function loadStats() {
+                fetchJSON('/api/status').then((d) => {
+                    if (d.db) setStats(d.db);
+                });
+            }
+            function setStats(d) {
+                document.getElementById('st-contatos').textContent =
+                    d.total_contatos;
+                document.getElementById('st-ok').textContent = d.envios_ok;
+                document.getElementById('st-err').textContent = d.envios_erro;
+            }
+
+            // ─── CONTATOS ────────────────────────────────────────────────
+            async function loadContatos() {
+                try {
+                    const res = await fetch('/api/contatos');
+                    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                    contatosDB = await res.json();
+                    renderContatos(contatosDB);
+                    renderSendList(contatosDB);
+                    renderIAList(contatosDB);
+                } catch (e) {
+                    const msg = `<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--red)">❌ Erro ao carregar: ${e.message}<br><small>Verifique se o servidor está rodando.</small></td></tr>`;
+                    document.getElementById('tbody-contatos').innerHTML = msg;
+                    document.getElementById('tbody-send').innerHTML = msg;
+                    document.getElementById('tbody-ia').innerHTML = msg;
+                }
+            }
+
+            function renderContatos(lista) {
+                const tbody = document.getElementById('tbody-contatos');
+                if (!lista.length) {
+                    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--muted)">Nenhum contato cadastrado</td></tr>`;
+                    return;
+                }
+                tbody.innerHTML = lista
+                    .map(
+                        (c, i) => `
+    <tr>
+      <td><input type="checkbox" class="row-check" data-id="${c.id}"/></td>
+      <td>${i + 1}</td>
+      <td><strong>${esc(c.nome)}</strong></td>
+      <td>${esc(c.numero)}</td>
+      <td>
+        <span class="badge ${c.envios_ok > 0 ? 'badge-ok' : 'badge-wait'}">
+          ${c.total_envios || 0} (${c.envios_ok || 0} ✅)
+        </span>
+      </td>
+      <td style="font-size:.82rem;color:var(--muted)">${c.ultimo_envio || '—'}</td>
+      <td style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="btn btn-blue btn-sm" onclick="openEdit(${c.id},'${esc(c.nome)}')">✏️</button>
+        <button class="btn btn-gray btn-sm" onclick="openHist(${c.id},'${esc(c.nome)}')">📋</button>
+        <button class="btn btn-red  btn-sm" onclick="remover(${c.id},'${esc(c.nome)}')">🗑️</button>
+      </td>
+    </tr>
+  `,
+                    )
+                    .join('');
+            }
+
+            function renderSendList(lista) {
+                const tbody = document.getElementById('tbody-send');
+                if (!lista.length) {
+                    tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--muted)">Nenhum contato salvo</td></tr>`;
+                    return;
+                }
+                tbody.innerHTML = lista
+                    .map((c) => {
+                        const checked = selectedSendIds.has(c.id)
+                            ? 'checked'
+                            : '';
+                        return `<tr>
+      <td><input type="checkbox" class="send-check" data-id="${c.id}" ${checked} onchange="toggleSendId(this)"/></td>
+      <td><strong>${esc(c.nome)}</strong></td>
+      <td>${esc(c.numero)}</td>
+      <td style="font-size:.82rem;color:var(--muted)">${c.ultimo_envio || '—'}</td>
+    </tr>`;
+                    })
+                    .join('');
+                updateSelCount();
+            }
+
+            function toggleSendId(el) {
+                const id = parseInt(el.dataset.id);
+                if (el.checked) selectedSendIds.add(id);
+                else selectedSendIds.delete(id);
+                updateSelCount();
+            }
+
+            function filtrarTabela() {
+                const q = document.getElementById('search').value.toLowerCase();
+                const filtrados = contatosDB.filter(
+                    (c) =>
+                        c.nome.toLowerCase().includes(q) ||
+                        c.numero.includes(q),
+                );
+                renderContatos(filtrados);
+            }
+
+            function filtrarSendList() {
+                const q = document
+                    .getElementById('search-send')
+                    .value.toLowerCase();
+                const filtrados = contatosDB.filter(
+                    (c) =>
+                        c.nome.toLowerCase().includes(q) ||
+                        c.numero.includes(q),
+                );
+                renderSendList(filtrados);
+            }
+
+            // ─── CRUD ─────────────────────────────────────────────────────
+            async function addContato() {
+                const nome = document.getElementById('inp-nome').value.trim();
+                const numero = document
+                    .getElementById('inp-numero')
+                    .value.trim();
+                const fb = document.getElementById('add-feedback');
+
+                if (!nome || !numero)
+                    return showFeedback(
+                        fb,
+                        '⚠️ Preencha nome e número',
+                        'warning',
+                    );
+
+                const res = await fetch('/api/contatos', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ nome, numero }),
+                });
+                const data = await res.json();
+
+                if (!res.ok) {
+                    showFeedback(
+                        fb,
+                        data.duplicado
+                            ? `⚠️ Número já cadastrado!`
+                            : '❌ Erro: ' + data.error,
+                        data.duplicado ? 'warning' : 'error',
+                    );
+                    return;
+                }
+
+                showFeedback(fb, `✅ ${nome} salvo com sucesso!`, 'success');
+                document.getElementById('inp-nome').value = '';
+                document.getElementById('inp-numero').value = '';
+                document.getElementById('inp-nome').focus();
+                loadContatos();
+                loadStats();
+            }
+
+            async function remover(id, nome) {
+                if (!confirm(`Remover "${nome}"?`)) return;
+                await fetch(`/api/contatos/${id}`, { method: 'DELETE' });
+                loadContatos();
+                loadStats();
+            }
+
+            async function removerSelecionados() {
+                const checks = [
+                    ...document.querySelectorAll('.row-check:checked'),
+                ];
+                if (!checks.length)
+                    return alert('Selecione ao menos um contato');
+                if (!confirm(`Remover ${checks.length} contato(s)?`)) return;
+                await Promise.all(
+                    checks.map((c) =>
+                        fetch(`/api/contatos/${c.dataset.id}`, {
+                            method: 'DELETE',
+                        }),
+                    ),
+                );
+                loadContatos();
+                loadStats();
+            }
+
+            // ─── EDITAR ───────────────────────────────────────────────────
+            function openEdit(id, nome) {
+                document.getElementById('edit-id').value = id;
+                document.getElementById('edit-nome').value = nome;
+                document.getElementById('modal-edit').classList.add('open');
+            }
+
+            async function salvarEdicao() {
+                const id = document.getElementById('edit-id').value;
+                const nome = document.getElementById('edit-nome').value.trim();
+                if (!nome) return;
+                await fetch(`/api/contatos/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ nome }),
+                });
+                closeModal();
+                loadContatos();
+            }
+
+            // ─── HISTÓRICO ────────────────────────────────────────────────
+            async function openHist(id, nome) {
+                const hist = await fetchJSON(`/api/contatos/${id}/historico`);
+                const div = document.getElementById('hist-content');
+                document.querySelector('#modal-hist h3').textContent =
+                    `📋 ${nome}`;
+                if (!hist.length) {
+                    div.innerHTML =
+                        '<p style="color:var(--muted);font-size:.88rem">Nenhum envio registrado ainda.</p>';
+                } else {
+                    div.innerHTML = hist
+                        .map(
+                            (h) => `
+      <div class="hist-item">
+        <span class="badge ${h.status === 'ok' ? 'badge-ok' : 'badge-err'}">${h.status === 'ok' ? '✅ Enviado' : '❌ Falha'}</span>
+        <span style="color:var(--muted);font-size:.8rem;margin-left:8px">${h.enviado_em}</span>
+        ${h.motivo ? `<br><span style="color:var(--red);font-size:.8rem">${esc(h.motivo)}</span>` : ''}
+        <p style="margin-top:4px;font-size:.85rem">${esc(h.mensagem)}</p>
+      </div>
+    `,
+                        )
+                        .join('');
+                }
+                document.getElementById('modal-hist').classList.add('open');
+            }
+
+            function closeModal() {
+                document
+                    .querySelectorAll('.modal-bg')
+                    .forEach((m) => m.classList.remove('open'));
+            }
+            document.querySelectorAll('.modal-bg').forEach((m) =>
+                m.addEventListener('click', (e) => {
+                    if (e.target === m) closeModal();
+                }),
+            );
+
+            // ─── CSV AUTO (clients.csv) ──────────────────────────────────
+            async function previewCSV() {
+                document.getElementById('btn-preview').disabled = true;
+                document.getElementById('btn-preview').textContent =
+                    '⏳ Lendo...';
+                const data = await fetchJSON('/api/csv/preview');
+                document.getElementById('btn-preview').disabled = false;
+                document.getElementById('btn-preview').textContent =
+                    '🔍 Pré-visualizar CSV';
+
+                const wrap = document.getElementById('csv-preview-wrap');
+                wrap.style.display = 'block';
+
+                document.getElementById('csv-stats').innerHTML = `
+    <div style="display:flex;gap:16px;flex-wrap:wrap;font-size:.88rem">
+      <span>📋 Total no CSV: <strong>${data.total}</strong></span>
+      <span style="color:var(--green)">✅ Com telefone: <strong>${data.contatos.length}</strong></span>
+      <span style="color:var(--muted)">📵 Sem telefone: <strong>${data.descartados.semTelefone}</strong></span>
+      <span style="color:var(--blue)">🔁 Duplicados: <strong>${data.descartados.duplicados}</strong></span>
+    </div>`;
+
+                document.getElementById('csv-preview-tbody').innerHTML =
+                    data.contatos
+                        .slice(0, 50)
+                        .map(
+                            (c, i) => `
+      <tr>
+        <td>${i + 1}</td>
+        <td>${esc(c.nome)}</td>
+        <td>${esc(c.numero)}</td>
+        <td style="color:var(--muted);font-size:.82rem">${esc(c.nota || '—')}</td>
+        <td style="color:var(--muted);font-size:.82rem">${esc(c.aniversario || '—')}</td>
+      </tr>
+    `,
+                        )
+                        .join('') +
+                    (data.contatos.length > 50
+                        ? `<tr><td colspan="5" style="text-align:center;color:var(--muted);font-size:.82rem">... e mais ${data.contatos.length - 50} contatos</td></tr>`
+                        : '');
+            }
+
+            async function importarCSVAuto() {
+                if (
+                    !confirm(
+                        'Importar todos os contatos do clients.csv para o banco?\nDuplicatas serão ignoradas automaticamente.',
+                    )
+                )
+                    return;
+                document.getElementById('btn-import-auto').disabled = true;
+                document.getElementById('btn-import-auto').textContent =
+                    '⏳ Importando...';
+
+                const fb = document.getElementById('import-feedback');
+                const res = await fetch('/api/csv/importar', {
+                    method: 'POST',
+                });
+                const d = await res.json();
+
+                document.getElementById('btn-import-auto').disabled = false;
+                document.getElementById('btn-import-auto').textContent =
+                    '⬆️ Importar para o banco';
+
+                showFeedback(
+                    fb,
+                    `✅ ${d.inseridos} importados | ⚠️ ${d.duplicados} duplicados ignorados | 📵 ${d.descartados?.semTelefone || 0} sem telefone`,
+                    d.inseridos > 0 ? 'success' : 'warning',
+                );
+                loadContatos();
+                loadStats();
+            }
+
+            // ─── GROQ IA ─────────────────────────────────────────────────
+            let templateAtual = '';
+            let contatosIA = [];
+
+            function resetIA() {
+                templateAtual = '';
+                document.getElementById('ia-template-card').style.display =
+                    'none';
+                document.getElementById('ia-select-card').style.display =
+                    'none';
+                document.getElementById('btn-gerar-ia').disabled = false;
+                document.getElementById('ia-progress-text').textContent = '';
+            }
+
+            function atualizarPreview() {
+                const template = document.getElementById('ia-template').value;
+                const exemplo =
+                    contatosDB[0]?.nome.trim().split(' ')[0] || 'Maria';
+                const nomeF =
+                    exemplo.charAt(0).toUpperCase() +
+                    exemplo.slice(1).toLowerCase();
+                document.getElementById('ia-preview-exemplo').textContent =
+                    template.replace(/{nome}/g, nomeF);
+            }
+
+            function renderIAList(lista) {
+                const tbody = document.getElementById('tbody-ia');
+                if (!lista.length) {
+                    tbody.innerHTML =
+                        '<tr><td colspan="4" style="text-align:center;padding:16px;color:var(--muted)">Nenhum contato</td></tr>';
+                    return;
+                }
+                tbody.innerHTML = lista
+                    .map(
+                        (c) => `
+    <tr>
+      <td><input type="checkbox" class="ia-check" data-id="${c.id}" onchange="updateIASelCount()"/></td>
+      <td><strong>${esc(c.nome)}</strong></td>
+      <td style="font-size:.82rem;color:var(--muted)">${esc(c.nota || '—')}</td>
+      <td style="font-size:.82rem;color:var(--muted)">${esc(c.aniversario || '—')}</td>
+    </tr>
+  `,
+                    )
+                    .join('');
+            }
+
+            function selecionarTodosIA() {
+                document
+                    .querySelectorAll('.ia-check')
+                    .forEach((c) => (c.checked = true));
+                updateIASelCount();
+            }
+            function deselecionarTodosIA() {
+                document
+                    .querySelectorAll('.ia-check')
+                    .forEach((c) => (c.checked = false));
+                updateIASelCount();
+            }
+            function toggleIAAll(el) {
+                document
+                    .querySelectorAll('.ia-check')
+                    .forEach((c) => (c.checked = el.checked));
+                updateIASelCount();
+            }
+            function updateIASelCount() {
+                const n = document.querySelectorAll('.ia-check:checked').length;
+                document.getElementById('ia-sel-count').textContent =
+                    `${n} selecionado(s)`;
+            }
+
+            async function gerarComIA() {
+                const contexto = document
+                    .getElementById('ia-contexto')
+                    .value.trim();
+                if (!contexto) return alert('Descreva o objetivo da mensagem!');
+
+                document.getElementById('btn-gerar-ia').disabled = true;
+                document.getElementById('ia-progress-bar-wrap').style.display =
+                    'block';
+                document.getElementById('ia-progress-bar').style.width = '0%';
+                document.getElementById('ia-progress-text').textContent =
+                    '🤖 Gerando template com IA...';
+
+                const ids = contatosDB.map((c) => c.id);
+
+                let data;
+                try {
+                    const res = await fetch('/api/groq/gerar', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ ids, contexto }),
+                    });
+                    data = await res.json();
+                    if (!res.ok) {
+                        document.getElementById(
+                            'ia-progress-text',
+                        ).textContent =
+                            '❌ Erro: ' + (data.error || 'Erro desconhecido');
+                        document.getElementById('btn-gerar-ia').disabled =
+                            false;
+                        return;
+                    }
+                } catch (e) {
+                    document.getElementById('ia-progress-text').textContent =
+                        '❌ Erro de conexão: ' + e.message;
+                    document.getElementById('btn-gerar-ia').disabled = false;
+                    return;
+                }
+
+                mostrarTemplateGerado(data.template, data.resultado);
+            }
+
+            function mostrarTemplateGerado(template, resultado) {
+                if (!template || !resultado) return;
+                templateAtual = template;
+                contatosIA = resultado;
+
+                document.getElementById('ia-progress-bar').style.width = '100%';
+                document.getElementById('ia-progress-text').textContent =
+                    `✅ Template gerado para ${resultado.length} pacientes!`;
+
+                document.getElementById('ia-template').value = template;
+                document.getElementById('ia-template-card').style.display =
+                    'block';
+                document.getElementById('ia-select-card').style.display =
+                    'block';
+                atualizarPreview();
+                selecionarTodosIA();
+                document
+                    .getElementById('ia-template-card')
+                    .scrollIntoView({ behavior: 'smooth' });
+            }
+
+            socket.on('groq:status', (msg) => {
+                document.getElementById('ia-progress-bar').style.width = '60%';
+                document.getElementById('ia-progress-text').textContent = msg;
+            });
+
+            socket.on('groq:done', ({ template, resultado }) => {
+                // Fallback: caso a resposta HTTP não tenha chegado ainda
+                mostrarTemplateGerado(template, resultado);
+            });
+
+            socket.on('groq:erro', (msg) => {
+                document.getElementById('ia-progress-text').textContent =
+                    '❌ Erro: ' + msg;
+                document.getElementById('btn-gerar-ia').disabled = false;
+            });
+
+            async function enviarMensagensIA() {
+                if (!isReady) return alert('WhatsApp não conectado!');
+
+                // Pega template editado
+                const templateFinal =
+                    document.getElementById('ia-template').value;
+                if (!templateFinal.trim()) return alert('Template vazio!');
+
+                // Pega apenas os selecionados
+                const idsSel = [
+                    ...document.querySelectorAll('.ia-check:checked'),
+                ].map((c) => parseInt(c.dataset.id));
+                if (!idsSel.length)
+                    return alert('Selecione ao menos um paciente!');
+
+                // Aplica template nos selecionados
+                const selecionados = contatosIA
+                    .filter((c) => idsSel.includes(c.id))
+                    .map((c) => {
+                        const nome = c.nome.trim().split(' ')[0];
+                        const nomeF =
+                            nome.charAt(0).toUpperCase() +
+                            nome.slice(1).toLowerCase();
+                        return {
+                            ...c,
+                            mensagem: templateFinal.replace(/{nome}/g, nomeF),
+                        };
+                    });
+
+                const body = { contatos: selecionados, delay: 5000 };
+
+                const imgFile = document.getElementById('img-input').files[0];
+                if (imgFile) {
+                    const b64 = await toBase64(imgFile);
+                    body.imagem = b64.split(',')[1];
+                    body.imagemMime = imgFile.type;
+                }
+
+                const res = await fetch('/api/send', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body),
+                });
+                if (!res.ok) return alert('Erro: ' + (await res.json()).error);
+
+                // Vai para aba de envio
+                showTab('tab-send');
+                document.querySelectorAll('.tab')[3].classList.add('active');
+                document.getElementById('progress-section').style.display =
+                    'block';
+                document
+                    .getElementById('progress-section')
+                    .scrollIntoView({ behavior: 'smooth' });
+            }
+
+            // ─── CSV ──────────────────────────────────────────────────────
+            function importCSV(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = async (e) => {
+                    const lines = e.target.result.trim().split('\n');
+                    const contatos = [];
+                    lines.forEach((line, idx) => {
+                        const parts = line.split(',');
+                        const nome = parts[0]?.trim();
+                        const numero = parts[1]?.trim();
+                        const mensagem = parts.slice(2).join(',').trim();
+                        if (!nome || !numero) return;
+                        if (idx === 0 && isNaN(numero.replace(/\D/g, '')))
+                            return; // header
+                        contatos.push({ nome, numero, mensagem });
+                    });
+
+                    const fb = document.getElementById('import-feedback');
+                    const res = await fetch('/api/contatos/importar', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ contatos }),
+                    });
+                    const data = await res.json();
+                    showFeedback(
+                        fb,
+                        `✅ ${data.inseridos} importados | ⚠️ ${data.duplicados} duplicados ignorados`,
+                        data.inseridos > 0 ? 'success' : 'warning',
+                    );
+                    loadContatos();
+                    loadStats();
+                };
+                reader.readAsText(file);
+                event.target.value = '';
+            }
+
+            // ─── ENVIAR ───────────────────────────────────────────────────
+            async function sendAll() {
+                if (!isReady) return alert('WhatsApp não conectado!');
+                const selecionados = getSelecionados();
+                if (!selecionados.length)
+                    return alert('Selecione ao menos um contato na lista!');
+
+                const mensagem = document.getElementById('msg-padrao').value;
+                const delay = parseInt(
+                    document.getElementById('delay-range').value,
+                );
+
+                const body = { ids: selecionados, mensagem, delay };
+
+                const imgFile = document.getElementById('img-input').files[0];
+                if (imgFile) {
+                    const b64 = await toBase64(imgFile);
+                    body.imagem = b64.split(',')[1];
+                    body.imagemMime = imgFile.type;
+                }
+
+                const res = await fetch('/api/send', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body),
+                });
+                if (!res.ok) alert('Erro: ' + (await res.json()).error);
+            }
+
+            function previewImagem(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    document.getElementById('img-preview-src').src =
+                        e.target.result;
+                    document.getElementById('img-preview').style.display =
+                        'block';
+                };
+                reader.readAsDataURL(file);
+            }
+
+            function removerImagem() {
+                document.getElementById('img-input').value = '';
+                document.getElementById('img-preview').style.display = 'none';
+                document.getElementById('img-preview-src').src = '';
+            }
+
+            function toBase64(file) {
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(reader.result);
+                    reader.onerror = reject;
+                    reader.readAsDataURL(file);
+                });
+            }
+
+            function getSelecionados() {
+                return [...selectedSendIds];
+            }
+
+            function toggleDestinatarios() {
+                const body = document.getElementById('dest-body');
+                const icon = document.getElementById('dest-toggle-icon');
+                const aberto = body.style.display !== 'none';
+                body.style.display = aberto ? 'none' : 'block';
+                icon.textContent = aberto ? '▼ expandir' : '▲ recolher';
+            }
+
+            function selecionarTodos() {
+                selectedSendIds.clear();
+                document.querySelectorAll('.send-check').forEach((c) => {
+                    c.checked = true;
+                    selectedSendIds.add(parseInt(c.dataset.id));
+                });
+                updateSelCount();
+            }
+            function deselecionarTodos() {
+                selectedSendIds.clear();
+                document
+                    .querySelectorAll('.send-check')
+                    .forEach((c) => (c.checked = false));
+                updateSelCount();
+            }
+            function toggleSendAll(el) {
+                if (el.checked) {
+                    document.querySelectorAll('.send-check').forEach((c) => {
+                        c.checked = true;
+                        selectedSendIds.add(parseInt(c.dataset.id));
+                    });
+                } else {
+                    selectedSendIds.clear();
+                    document
+                        .querySelectorAll('.send-check')
+                        .forEach((c) => (c.checked = false));
+                }
+                updateSelCount();
+            }
+            function toggleAll(el) {
+                document
+                    .querySelectorAll('.row-check')
+                    .forEach((c) => (c.checked = el.checked));
+            }
+            function updateSelCount() {
+                const n = document.querySelectorAll(
+                    '.send-check:checked',
+                ).length;
+                document.getElementById('sel-count').textContent =
+                    `${n} selecionado(s)`;
+            }
+
+            // ─── ABAS ─────────────────────────────────────────────────────
+            function showTab(id) {
+                document
+                    .querySelectorAll('.tab-content')
+                    .forEach((t) => t.classList.remove('active'));
+                document
+                    .querySelectorAll('.tab')
+                    .forEach((t) => t.classList.remove('active'));
+                document.getElementById(id).classList.add('active');
+                event.target.classList.add('active');
+                if (id === 'tab-send') loadContatos();
+                if (id === 'tab-bot') carregarBotConfig();
+            }
+
+            // ─── HELPERS ─────────────────────────────────────────────────
+            // Controla qual painel mostrar: 'carregando' | 'qr' | 'conectado'
+            function showEstado(estado, info = {}) {
+                document.getElementById('qr-loading').style.display =
+                    estado === 'carregando' ? 'block' : 'none';
+                document.getElementById('qr-area').style.display =
+                    estado === 'qr' ? 'block' : 'none';
+                document.getElementById('user-info').style.display =
+                    estado === 'conectado' ? 'block' : 'none';
+                if (estado === 'conectado' && info.name) {
+                    document.getElementById('user-name').textContent =
+                        info.name;
+                    document.getElementById('user-number').textContent =
+                        '+' + info.number;
+                }
+            }
+
+            function refreshQR() {
+                const img = document.getElementById('qr-img');
+                if (img) img.src = '/api/qr?t=' + Date.now();
+            }
+
+            // Polling de status — garante que o front atualiza mesmo se perder o socket event
+            let statusPolling = setInterval(async () => {
+                if (isReady) {
+                    clearInterval(statusPolling);
+                    return;
+                }
+                try {
+                    const d = await fetchJSON('/api/status');
+                    if (d.ready && d.info) {
+                        // WhatsApp pronto!
+                        clearInterval(statusPolling);
+                        clearAuthTimeout();
+                        isReady = true;
+                        setBadge(d.info.name, true);
+                        showEstado('conectado', d.info);
+                        document.getElementById('status-bar').className =
+                            'success';
+                        document.getElementById('status-bar').textContent =
+                            '✅ WhatsApp conectado!';
+                        loadContatos();
+                        loadStats();
+                    } else if (d.hasQR) {
+                        showEstado('qr');
+                        refreshQR();
+                        stopQRPolling();
+                    } else if (d.statusAtual === 'autenticando') {
+                        // Sessão encontrada, autenticando — mostra tela específica
+                        const title =
+                            document.getElementById('qr-loading-title');
+                        const icon = document.getElementById('qr-loading-icon');
+                        if (
+                            title &&
+                            title.textContent !== '🔐 Sessão encontrada!'
+                        )
+                            title.textContent = '🔐 Sessão encontrada!';
+                        if (icon) icon.textContent = '🔐';
+                        showEstado('carregando');
+                    }
+                } catch (e) {}
+            }, 3000);
+
+            async function logout() {
+                if (
+                    !confirm(
+                        'Deslogar o WhatsApp? Vai precisar escanear o QR Code novamente.',
+                    )
+                )
+                    return;
+                await fetch('/api/logout', { method: 'POST' });
+            }
+
+            function setBadge(label, connected) {
+                const b = document.getElementById('conn-badge');
+                b.textContent = '● ' + label;
+                b.className = connected ? 'connected' : 'disconnected';
+            }
+
+            function showFeedback(el, msg, type) {
+                el.style.display = 'block';
+                el.innerHTML = `<div id="status-bar" class="${type}" style="margin:0">${msg}</div>`;
+                setTimeout(() => (el.style.display = 'none'), 4000);
+            }
+
+            function appendLog(msg, type = 'ok') {
+                const log = document.getElementById('log');
+                const span = document.createElement('span');
+                span.className = 'log-' + type;
+                span.textContent = msg + '\n';
+                log.appendChild(span);
+                log.scrollTop = log.scrollHeight;
+            }
+
+            function insertVar(v) {
+                const ta = document.getElementById('msg-padrao');
+                const s = ta.selectionStart,
+                    e = ta.selectionEnd;
+                ta.value = ta.value.slice(0, s) + v + ta.value.slice(e);
+                ta.focus();
+                ta.selectionStart = ta.selectionEnd = s + v.length;
+            }
+
+            function esc(s) {
+                return String(s)
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;');
+            }
+
+            async function fetchJSON(url) {
+                const r = await fetch(url);
+                return r.json();
+            }
+
+            // ─── BOT ─────────────────────────────────────────────────────
+            async function carregarBotConfig() {
+                try {
+                    const config = await fetchJSON('/api/bot/config');
+                    document.getElementById('bot-enabled').checked =
+                        config.enabled;
+                    document.getElementById('bot-greeting').value =
+                        config.greetingMessage || '';
+                    document.getElementById('bot-scheduling-link').value =
+                        config.schedulingLink || '';
+                    document.getElementById('bot-address').value =
+                        config.address || '';
+                    document.getElementById('bot-plans').value = (
+                        config.plans || []
+                    ).join('\n');
+                    document.getElementById('bot-professional-contact').value =
+                        config.professionalContact || '';
+                    renderMenuOptions(config.menuOptions || []);
+                    carregarConversas();
+                } catch (e) {
+                    console.error('Erro ao carregar config do bot:', e);
+                }
+            }
+
+            function renderMenuOptions(options) {
+                const container = document.getElementById(
+                    'menu-options-editor',
+                );
+                let html =
+                    '<div style="display:grid;grid-template-columns:40px 1fr;gap:8px;align-items:center;padding-bottom:8px;border-bottom:1px solid var(--border);margin-bottom:8px;font-size:.82rem;color:var(--muted);font-weight:600"><span>#</span><span>Texto da opção</span></div>';
+                options.forEach((opt) => {
+                    html += `<div style="display:grid;grid-template-columns:40px 1fr;gap:8px;align-items:center;margin-bottom:6px">
+      <span style="text-align:center;font-weight:700;color:var(--dark);font-size:1.1rem">${opt.key}</span>
+      <input type="text" class="menu-opt-input" data-key="${opt.key}" data-action="${opt.action || ''}" value="${esc(opt.label)}" onchange="salvarBotConfig()"/>
+    </div>`;
+                });
+                container.innerHTML = html;
+            }
+
+            async function salvarBotConfig() {
+                const config = {
+                    enabled: document.getElementById('bot-enabled').checked,
+                    greetingMessage: document
+                        .getElementById('bot-greeting')
+                        .value.trim(),
+                    schedulingLink: document
+                        .getElementById('bot-scheduling-link')
+                        .value.trim(),
+                    address: document
+                        .getElementById('bot-address')
+                        .value.trim(),
+                    plans: document
+                        .getElementById('bot-plans')
+                        .value.split('\n')
+                        .map((s) => s.trim())
+                        .filter(Boolean),
+                    professionalContact: document
+                        .getElementById('bot-professional-contact')
+                        .value.trim(),
+                    menuOptions: [
+                        ...document.querySelectorAll('.menu-opt-input'),
+                    ].map((inp) => ({
+                        key: inp.dataset.key,
+                        label: inp.value.trim(),
+                        action: inp.dataset.action || undefined,
+                    })),
+                };
+
+                const fb = document.getElementById('bot-saved-feedback');
+                try {
+                    const res = await fetch('/api/bot/config', {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(config),
+                    });
+                    if (res.ok) {
+                        fb.textContent = '✅ Configuração salva!';
+                        fb.style.color = 'var(--green)';
+                        fb.style.display = 'block';
+                        setTimeout(() => (fb.style.display = 'none'), 3000);
+                    } else {
+                        fb.textContent = '❌ Erro ao salvar configuração';
+                        fb.style.color = 'var(--red)';
+                        fb.style.display = 'block';
+                        setTimeout(() => (fb.style.display = 'none'), 4000);
+                    }
+                } catch (e) {
+                    fb.textContent = '❌ Erro de conexão ao salvar';
+                    fb.style.color = 'var(--red)';
+                    fb.style.display = 'block';
+                    setTimeout(() => (fb.style.display = 'none'), 4000);
+                    console.error('Erro ao salvar config do bot:', e);
+                }
+            }
+
+            async function carregarConversas() {
+                try {
+                    const convs = await fetchJSON('/api/bot/conversations');
+                    const wrap = document.getElementById(
+                        'bot-conversations-wrap',
+                    );
+                    if (!convs.length) {
+                        wrap.innerHTML =
+                            '<p style="color:var(--muted)">Nenhuma conversa ativa no momento.</p>';
+                    } else {
+                        wrap.innerHTML = convs
+                            .map(
+                                (c) =>
+                                    `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #f0f0f0;font-size:.85rem">
+          <span><strong>${esc(c.phone)}</strong> — ${esc(c.state)}</span>
+          <span style="color:var(--muted);font-size:.8rem">${esc(c.context?.lastMessage || '')}</span>
+        </div>`,
+                            )
+                            .join('');
+                    }
+                } catch (e) {
+                    console.error('Erro ao carregar conversas:', e);
+                }
+            }
+
+            async function resetarTodasConversas() {
+                if (!confirm('Resetar todas as conversas ativas do bot?'))
+                    return;
+                try {
+                    await fetch('/api/bot/reset', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: '{}',
+                    });
+                    carregarConversas();
+                } catch (e) {
+                    console.error('Erro ao resetar conversas:', e);
+                }
+            }
+        </script>
+    </body>
+</html>

@@ -1,0 +1,13 @@
+firstname,lastname,email,phone,address,note,birthday,privacyPolicyAcceptedAt,marketingNotificationsAcceptedAt
+João,Silva,,11991172734,,,,,
+Maria,Souza,maria@email.com,+5511957455097,,,,"25.10.2024, 17:04","25.10.2024, 17:04"
+Carlos,Lima,,11 919061460,,Paciente especial,,,
+Ana,Beatriz,,+55 11 93151-5382,,,,,
+Pedro,,,,,,,,
+Sem,Telefone,sem@email.com,,,,,,,
+Invalido,Num,,123,,,,,
+ADRIANA,FAUSTINA,,11985454069,,,,,
+Aline,Fernanda,,11 987195657,,,,,
+Alexandre,Oliveira,,1196420-5580,,,,,
+Alice,Capana,alice@email.com,+5511960900845,,,,,"18.08.2025, 11:24"
+Duplicate,User,,11991172734,,,,,

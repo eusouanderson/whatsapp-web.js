@@ -87,6 +87,18 @@ describe('Bot', () => {
             expect(send.sent[0]).toContain(bot.config.greetingMessage);
         });
 
+        it('usa o nome do remetente na saudação quando {nome} está configurado', async () => {
+            bot.updateConfig({ greetingMessage: 'Olá, {nome}!' });
+            const send = makeSendMessage();
+            await bot.handleMessage(
+                'Oi',
+                '5511900000099',
+                send,
+                'Carlos Souza',
+            );
+            expect(send.sent[0]).toContain('Olá, Carlos!');
+        });
+
         it('processa escolha de opção válida do menu', async () => {
             const send = makeSendMessage();
             await bot.handleMessage('Olá', '5511900000001', send);
@@ -267,6 +279,20 @@ describe('Bot', () => {
             await bot.showMainMenu('5511900000001', send, '⚠️ Erro');
             expect(send.sent[0]).toContain('⚠️ Erro');
             expect(send.sent[0]).not.toContain(bot.config.greetingMessage);
+        });
+
+        it('substitui {nome} pelo primeiro nome do remetente', async () => {
+            bot.updateConfig({ greetingMessage: 'Olá, {nome}! Bem-vindo(a).' });
+            const send = makeSendMessage();
+            await bot.showMainMenu('5511900000001', send, null, 'Maria Silva');
+            expect(send.sent[0]).toContain('Olá, Maria! Bem-vindo(a).');
+        });
+
+        it('mantém greeting intacto quando senderName não é informado', async () => {
+            bot.updateConfig({ greetingMessage: 'Olá, {nome}! Bem-vindo(a).' });
+            const send = makeSendMessage();
+            await bot.showMainMenu('5511900000001', send);
+            expect(send.sent[0]).toContain('{nome}');
         });
     });
 

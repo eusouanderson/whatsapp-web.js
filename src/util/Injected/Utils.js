@@ -546,9 +546,19 @@ exports.LoadUtils = () => {
                     messageSecret: window.crypto.getRandomValues(
                         new Uint8Array(32),
                     ),
-                    cannotBeRanked: window
-                        .require('WAWebStatusGatingUtils')
-                        .canCheckStatusRankingPosterGating(),
+                    cannotBeRanked: (() => {
+                        try {
+                            const utils = window.require(
+                                'WAWebStatusGatingUtils',
+                            );
+                            return typeof utils.canCheckStatusRankingPosterGating ===
+                                'function'
+                                ? utils.canCheckStatusRankingPosterGating()
+                                : false;
+                        } catch (ignoredError) {
+                            return false;
+                        }
+                    })(),
                 },
             );
 

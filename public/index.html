@@ -290,6 +290,213 @@
                     grid-template-columns: 1fr;
                 }
             }
+
+            /* ─── RESPONSIVO ─────────────────────────────── */
+            @media (max-width: 768px) {
+                header {
+                    padding: 10px 16px;
+                    gap: 8px;
+                }
+                header h1 {
+                    font-size: 1rem;
+                }
+                #conn-badge {
+                    font-size: 0.72rem;
+                    padding: 3px 10px;
+                    white-space: nowrap;
+                }
+                .stats-bar {
+                    padding: 6px 16px;
+                    gap: 12px;
+                    flex-wrap: wrap;
+                }
+                #status-bar {
+                    margin: 10px 16px 0;
+                    font-size: 0.85rem;
+                }
+                main {
+                    margin: 12px auto;
+                    padding: 0 10px;
+                    gap: 12px;
+                }
+                .card {
+                    padding: 16px;
+                    border-radius: 10px;
+                }
+                .card h2 {
+                    font-size: 0.95rem;
+                }
+                .tab {
+                    padding: 8px 12px;
+                    font-size: 0.82rem;
+                }
+                .search-bar {
+                    gap: 8px;
+                }
+                .search-bar button {
+                    flex: 1;
+                }
+                .btn {
+                    padding: 8px 14px;
+                    font-size: 0.85rem;
+                }
+                .modal {
+                    padding: 20px 16px;
+                    width: 95%;
+                }
+            }
+
+            @media (max-width: 480px) {
+                header {
+                    padding: 8px 12px;
+                }
+                header h1 {
+                    font-size: 0.92rem;
+                }
+                #conn-badge {
+                    font-size: 0.68rem;
+                    padding: 3px 8px;
+                }
+                .stats-bar {
+                    padding: 6px 12px;
+                    gap: 8px 16px;
+                }
+                .stat {
+                    font-size: 0.78rem;
+                }
+                #status-bar {
+                    margin: 8px 12px 0;
+                    font-size: 0.82rem;
+                    padding: 8px 12px;
+                }
+                main {
+                    padding: 0 8px;
+                    margin: 10px auto;
+                }
+                .card {
+                    padding: 14px 12px;
+                    margin-bottom: 12px;
+                }
+                .tab {
+                    padding: 7px 10px;
+                    font-size: 0.78rem;
+                }
+                .tabs {
+                    gap: 2px;
+                }
+                th,
+                td {
+                    padding: 8px 8px;
+                    font-size: 0.82rem;
+                }
+                .btn {
+                    padding: 7px 12px;
+                    font-size: 0.82rem;
+                }
+                .btn-sm {
+                    padding: 5px 8px;
+                    font-size: 0.76rem;
+                }
+                .delay-row {
+                    gap: 8px;
+                }
+                #log {
+                    font-size: 0.75rem;
+                }
+            }
+
+            /* ─── CONTATOS SALVOS: layout card em mobile ──────────────────── */
+            @media (max-width: 600px) {
+                /* Search bar empilhada */
+                #tab-contatos .search-bar {
+                    flex-direction: column;
+                    gap: 8px;
+                }
+                #tab-contatos .search-bar input,
+                #tab-contatos .search-bar button {
+                    width: 100%;
+                }
+
+                /* Converte tabela em cards */
+                #tab-contatos .table-wrap {
+                    overflow-x: unset;
+                }
+                #tab-contatos table,
+                #tab-contatos tbody {
+                    display: block;
+                }
+                /* Oculta cabeçalho */
+                #tab-contatos thead {
+                    display: none;
+                }
+                /* Cada linha vira um card */
+                #tab-contatos tr {
+                    display: grid;
+                    grid-template-columns: 28px 1fr auto;
+                    grid-template-rows: auto auto auto;
+                    column-gap: 10px;
+                    row-gap: 2px;
+                    padding: 10px 8px;
+                    border-bottom: 1px solid #ebebeb;
+                    background: #fff;
+                }
+                #tab-contatos tr:last-child {
+                    border-bottom: none;
+                }
+
+                /* checkbox — coluna esquerda, centralizado */
+                #tab-contatos td:nth-child(1) {
+                    grid-column: 1;
+                    grid-row: 1 / 4;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    padding: 0;
+                }
+                /* # — oculto */
+                #tab-contatos td:nth-child(2) {
+                    display: none;
+                }
+                /* Nome */
+                #tab-contatos td:nth-child(3) {
+                    grid-column: 2;
+                    grid-row: 1;
+                    font-size: 0.92rem;
+                    padding: 0;
+                }
+                /* Número */
+                #tab-contatos td:nth-child(4) {
+                    grid-column: 2;
+                    grid-row: 2;
+                    font-size: 0.82rem;
+                    color: var(--muted);
+                    padding: 0;
+                }
+                /* Envios */
+                #tab-contatos td:nth-child(5) {
+                    grid-column: 2;
+                    grid-row: 3;
+                    padding: 0;
+                }
+                /* Último envio — oculto */
+                #tab-contatos td:nth-child(6) {
+                    display: none;
+                }
+                /* Botões — coluna direita */
+                #tab-contatos td:nth-child(7) {
+                    grid-column: 3;
+                    grid-row: 1 / 4;
+                    display: flex !important;
+                    flex-direction: column;
+                    gap: 4px;
+                    justify-content: center;
+                    padding: 0;
+                }
+                #tab-contatos td:nth-child(7) .btn {
+                    padding: 6px 10px;
+                    font-size: 0.8rem;
+                }
+            }
             label {
                 display: block;
                 font-size: 0.82rem;
@@ -616,9 +823,51 @@
                         id="qr-substatus"
                         style="color: var(--muted); font-size: 0.85rem"
                     >
-                        Abrindo Chrome, aguarde ~30 segundos
+                        Abrindo Chrome, aguarde alguns segundos
                     </p>
+
+                    <!-- Barra de progresso (visível só durante carregamento) -->
                     <div
+                        id="qr-progress-wrap"
+                        style="
+                            display: none;
+                            margin: 14px auto 0;
+                            max-width: 260px;
+                        "
+                    >
+                        <div
+                            style="
+                                background: #e0e0e0;
+                                border-radius: 20px;
+                                height: 8px;
+                                overflow: hidden;
+                            "
+                        >
+                            <div
+                                id="qr-progress-bar"
+                                style="
+                                    height: 100%;
+                                    background: var(--green);
+                                    border-radius: 20px;
+                                    width: 0%;
+                                    transition: width 0.4s;
+                                "
+                            ></div>
+                        </div>
+                        <p
+                            id="qr-progress-pct"
+                            style="
+                                font-size: 0.78rem;
+                                color: var(--muted);
+                                margin-top: 4px;
+                            "
+                        >
+                            0%
+                        </p>
+                    </div>
+
+                    <div
+                        id="qr-dots"
                         style="
                             margin-top: 14px;
                             display: flex;
@@ -636,7 +885,8 @@
                             >●</span
                         >
                     </div>
-                    <!-- Botão de emergência — aparece se autenticando por mais de 30s sem ready -->
+
+                    <!-- Botão de emergência — aparece se autenticando por mais de 90s sem ready -->
                     <div
                         id="auth-timeout-warn"
                         style="
@@ -649,8 +899,7 @@
                             color: #856404;
                         "
                     >
-                        ⚠️ Sessão demorando para ativar. Se persistir, limpe a
-                        sessão:
+                        ⚠️ Sincronização demorando. Se travar, limpe a sessão:
                         <br /><button
                             class="btn btn-red btn-sm"
                             style="margin-top: 8px"
@@ -666,43 +915,187 @@
                     id="qr-area"
                     style="display: none; text-align: center; padding: 16px"
                 >
-                    <img
-                        id="qr-img"
-                        src=""
-                        alt="QR Code"
-                        style="
-                            width: 280px;
-                            border-radius: 12px;
-                            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-                            margin-bottom: 12px;
-                            cursor: pointer;
-                        "
-                        onclick="refreshQR()"
-                        title="Clique para atualizar"
-                    />
-                    <p
-                        style="
-                            font-weight: 600;
-                            color: var(--dark);
-                            margin-bottom: 6px;
-                        "
-                    >
-                        📷 Escaneie com o WhatsApp
-                    </p>
-                    <p
-                        style="
-                            font-size: 0.8rem;
-                            color: var(--muted);
-                            margin-bottom: 10px;
-                        "
-                    >
-                        Clique na imagem se o QR expirar
-                    </p>
-                    <div class="qr-steps">
-                        <span class="qr-step">1️⃣ Abra o WhatsApp</span>
-                        <span class="qr-step">2️⃣ Dispositivos conectados</span>
-                        <span class="qr-step">3️⃣ Conectar dispositivo</span>
-                        <span class="qr-step">4️⃣ Aponte a câmera aqui</span>
+                    <!-- Modo QR padrão -->
+                    <div id="qr-mode">
+                        <img
+                            id="qr-img"
+                            src=""
+                            alt="QR Code"
+                            style="
+                                width: 280px;
+                                border-radius: 12px;
+                                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+                                margin-bottom: 12px;
+                                cursor: pointer;
+                            "
+                            onclick="refreshQR()"
+                            title="Clique para atualizar"
+                        />
+                        <p
+                            style="
+                                font-weight: 600;
+                                color: var(--dark);
+                                margin-bottom: 6px;
+                            "
+                        >
+                            📷 Escaneie com o WhatsApp
+                        </p>
+                        <p
+                            style="
+                                font-size: 0.8rem;
+                                color: var(--muted);
+                                margin-bottom: 10px;
+                            "
+                        >
+                            Clique na imagem se o QR expirar
+                        </p>
+                        <div class="qr-steps">
+                            <span class="qr-step">1️⃣ Abra o WhatsApp</span>
+                            <span class="qr-step"
+                                >2️⃣ Dispositivos conectados</span
+                            >
+                            <span class="qr-step">3️⃣ Conectar dispositivo</span>
+                            <span class="qr-step">4️⃣ Aponte a câmera aqui</span>
+                        </div>
+                        <div
+                            style="
+                                margin-top: 16px;
+                                border-top: 1px solid var(--border);
+                                padding-top: 14px;
+                            "
+                        >
+                            <p
+                                style="
+                                    font-size: 0.8rem;
+                                    color: var(--muted);
+                                    margin-bottom: 8px;
+                                "
+                            >
+                                Está no celular e não consegue escanear?
+                            </p>
+                            <button
+                                class="btn btn-blue btn-sm"
+                                onclick="mostrarPairingCode()"
+                            >
+                                📱 Conectar com número de telefone
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Modo pairing code -->
+                    <div id="pairing-mode" style="display: none">
+                        <div style="font-size: 2rem; margin-bottom: 10px">
+                            📱
+                        </div>
+                        <p
+                            style="
+                                font-weight: 600;
+                                color: var(--dark);
+                                margin-bottom: 6px;
+                            "
+                        >
+                            Conectar com número de telefone
+                        </p>
+                        <p
+                            style="
+                                font-size: 0.82rem;
+                                color: var(--muted);
+                                margin-bottom: 14px;
+                            "
+                        >
+                            Informe o número do WhatsApp que será vinculado
+                        </p>
+                        <div
+                            style="
+                                display: flex;
+                                gap: 8px;
+                                justify-content: center;
+                                flex-wrap: wrap;
+                                margin-bottom: 12px;
+                            "
+                        >
+                            <input
+                                id="pairing-phone"
+                                type="tel"
+                                placeholder="Ex: 11999998888"
+                                style="
+                                    max-width: 220px;
+                                    text-align: center;
+                                    font-size: 1rem;
+                                "
+                                onkeydown="
+                                    if (event.key === 'Enter')
+                                        solicitarPairingCode();
+                                "
+                            />
+                            <button
+                                class="btn btn-green"
+                                onclick="solicitarPairingCode()"
+                                id="btn-pairing"
+                            >
+                                Gerar código
+                            </button>
+                        </div>
+
+                        <!-- Exibição do código -->
+                        <div
+                            id="pairing-result"
+                            style="display: none; margin-top: 12px"
+                        >
+                            <p
+                                style="
+                                    font-size: 0.82rem;
+                                    color: var(--muted);
+                                    margin-bottom: 6px;
+                                "
+                            >
+                                Digite este código no WhatsApp:
+                            </p>
+                            <div
+                                id="pairing-code-display"
+                                style="
+                                    font-size: 2rem;
+                                    font-weight: 700;
+                                    letter-spacing: 6px;
+                                    color: var(--dark);
+                                    background: var(--gray);
+                                    border-radius: 10px;
+                                    padding: 14px 20px;
+                                    margin: 0 auto 10px;
+                                    display: inline-block;
+                                "
+                            ></div>
+                            <p style="font-size: 0.78rem; color: var(--muted)">
+                                WhatsApp → Dispositivos conectados → Conectar
+                                dispositivo → Conectar com número de telefone
+                            </p>
+                            <p
+                                id="pairing-timer"
+                                style="
+                                    font-size: 0.78rem;
+                                    color: var(--muted);
+                                    margin-top: 4px;
+                                "
+                            ></p>
+                        </div>
+
+                        <div
+                            id="pairing-error"
+                            style="
+                                display: none;
+                                color: var(--red);
+                                font-size: 0.85rem;
+                                margin-top: 8px;
+                            "
+                        ></div>
+
+                        <button
+                            class="btn btn-gray btn-sm"
+                            onclick="voltarParaQR()"
+                            style="margin-top: 14px"
+                        >
+                            ← Voltar para QR Code
+                        </button>
                     </div>
                 </div>
 
@@ -1037,8 +1430,41 @@
                             id="bot-greeting"
                             style="min-height: 80px"
                             onchange="salvarBotConfig()"
-                            placeholder="Olá! Bem-vindo(a)..."
+                            placeholder="Olá, {nome}! Bem-vindo(a)..."
                         ></textarea>
+                        <div class="tag-list" style="margin-top: 8px">
+                            <span
+                                style="
+                                    font-size: 0.8rem;
+                                    color: var(--muted);
+                                    align-self: center;
+                                "
+                                >Variável:</span
+                            >
+                            <span
+                                class="tag"
+                                onclick="inserirVariavelSaudacao('{nome}')"
+                                >👤 {nome}</span
+                            >
+                        </div>
+                        <p
+                            style="
+                                font-size: 0.78rem;
+                                color: var(--muted);
+                                margin-top: 6px;
+                            "
+                        >
+                            <code
+                                style="
+                                    background: #eee;
+                                    padding: 1px 5px;
+                                    border-radius: 3px;
+                                "
+                                >{nome}</code
+                            >
+                            será substituído pelo primeiro nome do paciente
+                            automaticamente.
+                        </p>
                     </div>
 
                     <!-- CARD: Opções do Menu -->
@@ -1702,11 +2128,11 @@ Olá {nome}! Temos novidades para você 🎉</textarea
 
             function startAuthTimeout() {
                 clearAuthTimeout();
-                // Se após 35s ainda não tivermos ready, mostra aviso de sessão presa
+                // Se após 90s ainda não tivermos ready, mostra aviso de sessão presa
                 authTimeoutId = setTimeout(() => {
                     const warn = document.getElementById('auth-timeout-warn');
                     if (warn && !isReady) warn.style.display = 'block';
-                }, 35000);
+                }, 90000);
             }
 
             function clearAuthTimeout() {
@@ -1738,28 +2164,54 @@ Olá {nome}! Temos novidades para você 🎉</textarea
             });
 
             // ─── Evento: status geral ─────────────────────────────────────
-            socket.on('status', ({ type, msg, statusAtual }) => {
+            socket.on('status', ({ type, msg, statusAtual, percent }) => {
                 const bar = document.getElementById('status-bar');
                 bar.className = type;
                 bar.textContent = msg;
 
-                // Atualiza substatus na tela de carregamento
                 const sub = document.getElementById('qr-substatus');
                 const title = document.getElementById('qr-loading-title');
                 const icon = document.getElementById('qr-loading-icon');
+                const progressWrap =
+                    document.getElementById('qr-progress-wrap');
+                const progressBar = document.getElementById('qr-progress-bar');
+                const progressPct = document.getElementById('qr-progress-pct');
 
                 if (statusAtual === 'autenticando') {
+                    // Sessão encontrada, aguardando sync começar
+                    if (title) title.textContent = '🔐 Sessão encontrada!';
+                    if (icon) icon.textContent = '🔐';
+                    if (sub) sub.textContent = 'Aguardando sincronização...';
+                    if (progressWrap) progressWrap.style.display = 'none';
+                    showEstado('carregando');
+                    startAuthTimeout();
+                } else if (statusAtual === 'sincronizando') {
+                    // Sync pós-autenticação com progresso real
                     if (title) title.textContent = '🔐 Sessão encontrada!';
                     if (icon) icon.textContent = '🔐';
                     if (sub)
-                        sub.textContent =
-                            'Verificando sessão salva... aguarde alguns segundos';
+                        sub.textContent = `Sincronizando mensagens...${percent != null ? ' ' + percent + '%' : ''}`;
+                    if (progressWrap && percent != null) {
+                        progressWrap.style.display = 'block';
+                        if (progressBar)
+                            progressBar.style.width = percent + '%';
+                        if (progressPct)
+                            progressPct.textContent = percent + '%';
+                    }
                     showEstado('carregando');
-                    startAuthTimeout();
                 } else if (statusAtual === 'carregando') {
-                    if (title) title.textContent = 'Iniciando WhatsApp...';
-                    if (icon) icon.textContent = '📱';
-                    if (sub && !isReady) sub.textContent = msg;
+                    // Carga inicial do Chrome/WA Web
+                    if (title) title.textContent = 'Carregando WhatsApp Web...';
+                    if (icon) icon.textContent = '⏳';
+                    if (sub)
+                        sub.textContent = `Aguarde${percent != null ? ' — ' + percent + '%' : '...'}`;
+                    if (progressWrap && percent != null) {
+                        progressWrap.style.display = 'block';
+                        if (progressBar)
+                            progressBar.style.width = percent + '%';
+                        if (progressPct)
+                            progressPct.textContent = percent + '%';
+                    }
                     showEstado('carregando');
                 } else if (
                     msg &&
@@ -1770,9 +2222,11 @@ Olá {nome}! Temos novidades para você 🎉</textarea
                     showEstado('qr');
                     refreshQR();
                 } else if (sub && !isReady) {
+                    // Estado inicial: Iniciando Chrome
                     if (title) title.textContent = 'Iniciando WhatsApp...';
                     if (icon) icon.textContent = '📱';
-                    sub.textContent = msg;
+                    if (progressWrap) progressWrap.style.display = 'none';
+                    sub.textContent = msg || 'Abrindo Chrome, aguarde...';
                 }
             });
 
@@ -1860,7 +2314,10 @@ Olá {nome}! Temos novidades para você 🎉</textarea
                     // QR gerado mas não escaneado
                     showEstado('qr');
                     refreshQR();
-                } else if (d.statusAtual === 'autenticando') {
+                } else if (
+                    d.statusAtual === 'autenticando' ||
+                    d.statusAtual === 'sincronizando'
+                ) {
                     // 🔐 Sessão salva encontrada, aguardando ready
                     const title = document.getElementById('qr-loading-title');
                     const icon = document.getElementById('qr-loading-icon');
@@ -1869,7 +2326,9 @@ Olá {nome}! Temos novidades para você 🎉</textarea
                     if (icon) icon.textContent = '🔐';
                     if (sub)
                         sub.textContent =
-                            'Verificando sessão salva... aguarde alguns segundos';
+                            d.statusAtual === 'sincronizando'
+                                ? 'Sincronizando mensagens...'
+                                : 'Aguardando sincronização...';
                     showEstado('carregando');
                     document.getElementById('status-bar').className = 'warning';
                     document.getElementById('status-bar').textContent =
@@ -2610,17 +3069,23 @@ Olá {nome}! Temos novidades para você 🎉</textarea
                         showEstado('qr');
                         refreshQR();
                         stopQRPolling();
-                    } else if (d.statusAtual === 'autenticando') {
-                        // Sessão encontrada, autenticando — mostra tela específica
+                    } else if (
+                        d.statusAtual === 'autenticando' ||
+                        d.statusAtual === 'sincronizando'
+                    ) {
                         const title =
                             document.getElementById('qr-loading-title');
                         const icon = document.getElementById('qr-loading-icon');
-                        if (
-                            title &&
-                            title.textContent !== '🔐 Sessão encontrada!'
-                        )
-                            title.textContent = '🔐 Sessão encontrada!';
+                        if (title) title.textContent = '🔐 Sessão encontrada!';
                         if (icon) icon.textContent = '🔐';
+                        showEstado('carregando');
+                    } else if (d.statusAtual === 'carregando') {
+                        const title =
+                            document.getElementById('qr-loading-title');
+                        const icon = document.getElementById('qr-loading-icon');
+                        if (title)
+                            title.textContent = 'Carregando WhatsApp Web...';
+                        if (icon) icon.textContent = '⏳';
                         showEstado('carregando');
                     }
                 } catch (e) {}
@@ -2680,6 +3145,16 @@ Olá {nome}! Temos novidades para você 🎉</textarea
             }
 
             // ─── BOT ─────────────────────────────────────────────────────
+            function inserirVariavelSaudacao(v) {
+                const ta = document.getElementById('bot-greeting');
+                const s = ta.selectionStart,
+                    e = ta.selectionEnd;
+                ta.value = ta.value.slice(0, s) + v + ta.value.slice(e);
+                ta.focus();
+                ta.selectionStart = ta.selectionEnd = s + v.length;
+                salvarBotConfig();
+            }
+
             async function carregarBotConfig() {
                 try {
                     const config = await fetchJSON('/api/bot/config');
@@ -2798,6 +3273,85 @@ Olá {nome}! Temos novidades para você 🎉</textarea
                     console.error('Erro ao carregar conversas:', e);
                 }
             }
+
+            // ─── PAIRING CODE ─────────────────────────────────────────────
+            let pairingTimerInterval = null;
+
+            function mostrarPairingCode() {
+                document.getElementById('qr-mode').style.display = 'none';
+                document.getElementById('pairing-mode').style.display = 'block';
+                document.getElementById('pairing-phone').focus();
+            }
+
+            function voltarParaQR() {
+                document.getElementById('pairing-mode').style.display = 'none';
+                document.getElementById('qr-mode').style.display = 'block';
+                document.getElementById('pairing-result').style.display =
+                    'none';
+                document.getElementById('pairing-error').style.display = 'none';
+                document.getElementById('pairing-phone').value = '';
+                clearInterval(pairingTimerInterval);
+            }
+
+            async function solicitarPairingCode() {
+                const phone = document
+                    .getElementById('pairing-phone')
+                    .value.trim();
+                if (!phone) return;
+
+                const btn = document.getElementById('btn-pairing');
+                const errEl = document.getElementById('pairing-error');
+                btn.disabled = true;
+                btn.textContent = '⏳ Gerando...';
+                errEl.style.display = 'none';
+                document.getElementById('pairing-result').style.display =
+                    'none';
+
+                try {
+                    const res = await fetch('/api/pairing-code', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ phone }),
+                    });
+                    const data = await res.json();
+                    if (!res.ok)
+                        throw new Error(data.error || 'Erro ao gerar código');
+                    exibirPairingCode(data.code);
+                } catch (e) {
+                    errEl.textContent = '❌ ' + e.message;
+                    errEl.style.display = 'block';
+                } finally {
+                    btn.disabled = false;
+                    btn.textContent = 'Gerar código';
+                }
+            }
+
+            function exibirPairingCode(code) {
+                const formatted =
+                    code.length === 8
+                        ? code.slice(0, 4) + '-' + code.slice(4)
+                        : code;
+                document.getElementById('pairing-code-display').textContent =
+                    formatted;
+                document.getElementById('pairing-result').style.display =
+                    'block';
+                clearInterval(pairingTimerInterval);
+                let secs = 180;
+                const timerEl = document.getElementById('pairing-timer');
+                timerEl.textContent = `Expira em ${secs}s`;
+                pairingTimerInterval = setInterval(() => {
+                    secs--;
+                    timerEl.textContent =
+                        secs > 0
+                            ? `Expira em ${secs}s`
+                            : 'Código expirado — gere um novo';
+                    if (secs <= 0) clearInterval(pairingTimerInterval);
+                }, 1000);
+            }
+
+            socket.on('pairing_code', ({ code }) => {
+                exibirPairingCode(code);
+            });
 
             async function resetarTodasConversas() {
                 if (!confirm('Resetar todas as conversas ativas do bot?'))

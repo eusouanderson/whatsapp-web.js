@@ -236,7 +236,10 @@ describe('gerarResposta', () => {
         await gerarResposta('Qual o valor da consulta?');
         const [, options] = mockFetch.mock.calls[0];
         const body = JSON.parse(options.body);
-        expect(body.messages[0].content).toContain('Qual o valor da consulta?');
+        // system message vem em [0], mensagem do usuário em [1]
+        expect(body.messages[0].role).toBe('system');
+        expect(body.messages[1].role).toBe('user');
+        expect(body.messages[1].content).toBe('Qual o valor da consulta?');
     });
 
     it('lança erro quando a API retorna status de erro', async () => {

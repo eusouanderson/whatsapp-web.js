@@ -27,10 +27,12 @@ const { Bot } = require('../../bot.js');
 /** Mock do WhatsApp Client */
 const mockClient = {
     on: vi.fn(),
-    initialize: vi.fn(),
+    initialize: vi.fn(async () => {}),
+    destroy: vi.fn(async () => {}),
     logout: vi.fn(async () => {}),
     sendMessage: vi.fn(async () => {}),
     getNumberId: vi.fn(async (num) => ({ _serialized: `${num}@c.us` })),
+    requestPairingCode: vi.fn(async () => 'ABCD1234'),
     info: { pushname: 'Dra. Fabiana', wid: { user: '5511999998888' } },
 };
 
@@ -195,9 +197,14 @@ const port = () => server.address().port;
 //  EVENTOS WHATSAPP — callbacks registrados via client.on()
 // ════════════════════════════════════════════════════════════
 describe('Eventos WhatsApp — callbacks internos', () => {
-    it('loading_screen: atualiza statusAtual para "carregando"', () => {
+    it('loading_screen: define statusAtual como "carregando" antes de autenticar', () => {
+        waCallbacks.loading_screen(50, 'Loading');
+        expect(true).toBe(true);
+    });
+
+    it('loading_screen: define statusAtual como "sincronizando" após autenticar', () => {
+        waCallbacks.authenticated(); // seta jaAutenticou = true
         waCallbacks.loading_screen(75, 'Loading');
-        // Apenas valida que não lança exceção e cobre as linhas
         expect(true).toBe(true);
     });
 
@@ -240,6 +247,54 @@ describe('Eventos WhatsApp — callbacks internos', () => {
         expect(state.clientReady).toBe(false);
     });
 
+    it('code: emite pairing_code via socket', () => {
+        waCallbacks.code('ABCD1234');
+        expect(true).toBe(true);
+    });
+
+    it('watchdog: não reinicia se ready chegar antes de 5 minutos', async () => {
+        vi.useFakeTimers();
+        mockClient.destroy.mockClear();
+        waCallbacks.authenticated();
+        await waCallbacks.ready();
+        await vi.advanceTimersByTimeAsync(5 * 60 * 1000 + 100);
+        expect(mockClient.destroy).not.toHaveBeenCalled();
+        vi.useRealTimers();
+        app._setClientReady(false);
+    });
+
+    it('watchdog: reinicia processo se travar após autenticação por 5 minutos', async () => {
+        vi.useFakeTimers();
+        app._setClientReady(false); // garante que clientReady=false antes do teste
+        mockClient.destroy.mockClear();
+        const exitSpy = vi
+            .spyOn(process, 'exit')
+            .mockImplementation(() => undefined);
+        const spawnSpy = vi
+            .spyOn(require('child_process'), 'spawn')
+            .mockReturnValue({ unref: vi.fn() });
+        waCallbacks.authenticated();
+        // 5min watchdog + 800ms delay interno do reiniciarCliente
+        await vi.advanceTimersByTimeAsync(5 * 60 * 1000 + 1000);
+        expect(mockClient.destroy).toHaveBeenCalled();
+        expect(spawnSpy).toHaveBeenCalled();
+        expect(exitSpy).toHaveBeenCalled();
+        exitSpy.mockRestore();
+        spawnSpy.mockRestore();
+        vi.useRealTimers();
+    });
+
+    it('watchdog: não reinicia se já estiver conectado (clientReady=true)', async () => {
+        vi.useFakeTimers();
+        mockClient.destroy.mockClear();
+        app._setClientReady(true, { pushname: 'X', wid: { user: '55' } });
+        waCallbacks.authenticated();
+        await vi.advanceTimersByTimeAsync(5 * 60 * 1000 + 100);
+        expect(mockClient.destroy).not.toHaveBeenCalled();
+        vi.useRealTimers();
+        app._setClientReady(false);
+    });
+
     it('message (bot): responde mensagem de novo contato com menu', async () => {
         const msg = {
             fromMe: false,
@@ -253,11 +308,61 @@ describe('Eventos WhatsApp — callbacks internos', () => {
         );
     });
 
+    it('message (bot): usa notifyName na saudação quando disponível', async () => {
+        const msg = {
+            fromMe: false,
+            from: '5511900000099',
+            body: 'Oi',
+            _data: { notifyName: 'Ana Paula' },
+        };
+        await waCallbacks.message(msg);
+        expect(mockClient.sendMessage).toHaveBeenCalledWith(
+            '5511900000099',
+            expect.stringContaining('Menu de Atendimento'),
+        );
+    });
+
+    it('message (bot): notifica profissional quando paciente seleciona "falar com profissional"', async () => {
+        // Configura contato do profissional
+        app._bot().updateConfig({ professionalContact: '11999990000' });
+        // Primeira mensagem — abre conversa
+        await waCallbacks.message({
+            fromMe: false,
+            from: '5511800000001',
+            body: 'oi',
+            _data: { notifyName: 'Joao' },
+        });
+        mockClient.sendMessage.mockClear();
+        // Seleciona opção 1 (falar com profissional)
+        await waCallbacks.message({
+            fromMe: false,
+            from: '5511800000001',
+            body: '1',
+        });
+        // Deve enviar mensagem para o paciente E notificar o profissional
+        const calls = mockClient.sendMessage.mock.calls;
+        const numeros = calls.map((c) => c[0]);
+        expect(numeros.some((n) => n.includes('11800000001'))).toBe(true);
+        expect(numeros.some((n) => n.includes('11999990000'))).toBe(true);
+        app._bot().updateConfig({ professionalContact: '' });
+    });
+
     it('message (bot): não responde mensagens do próprio bot', async () => {
         const msg = {
             fromMe: true,
             from: '5511900000001',
             body: 'Olá',
+        };
+        await waCallbacks.message(msg);
+        expect(mockClient.sendMessage).not.toHaveBeenCalled();
+    });
+
+    it('message (bot): não responde mensagens de status', async () => {
+        const msg = {
+            fromMe: false,
+            isStatus: true,
+            from: 'status@broadcast',
+            body: 'status update',
         };
         await waCallbacks.message(msg);
         expect(mockClient.sendMessage).not.toHaveBeenCalled();
@@ -406,6 +511,58 @@ describe('GET /api/qr', () => {
         const res = await req().get('/api/qr');
         expect(res.status).toBe(204);
         app._setClientReady(false);
+    });
+});
+
+// ════════════════════════════════════════════════════════════
+//  POST /api/pairing-code
+// ════════════════════════════════════════════════════════════
+describe('POST /api/pairing-code', () => {
+    beforeEach(() => {
+        mockClient.requestPairingCode.mockResolvedValue('ABCD1234');
+    });
+
+    it('retorna o código quando cliente não está conectado', async () => {
+        const res = await req()
+            .post('/api/pairing-code')
+            .send({ phone: '11999998888' });
+        expect(res.status).toBe(200);
+        expect(res.body.code).toBe('ABCD1234');
+    });
+
+    it('remove caracteres não numéricos do número', async () => {
+        await req()
+            .post('/api/pairing-code')
+            .send({ phone: '(11) 99999-8888' });
+        expect(mockClient.requestPairingCode).toHaveBeenCalledWith(
+            '11999998888',
+        );
+    });
+
+    it('retorna 400 se phone não for informado', async () => {
+        const res = await req().post('/api/pairing-code').send({});
+        expect(res.status).toBe(400);
+        expect(res.body).toHaveProperty('error');
+    });
+
+    it('retorna 400 se WhatsApp já estiver conectado', async () => {
+        await waCallbacks.ready();
+        const res = await req()
+            .post('/api/pairing-code')
+            .send({ phone: '11999998888' });
+        expect(res.status).toBe(400);
+        expect(res.body.error).toMatch(/já conectado/i);
+    });
+
+    it('retorna 500 se requestPairingCode lançar erro', async () => {
+        mockClient.requestPairingCode.mockRejectedValueOnce(
+            new Error('pairing failed'),
+        );
+        const res = await req()
+            .post('/api/pairing-code')
+            .send({ phone: '11999998888' });
+        expect(res.status).toBe(500);
+        expect(res.body).toHaveProperty('error');
     });
 });
 

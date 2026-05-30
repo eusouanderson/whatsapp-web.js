@@ -35,7 +35,7 @@ function createApp(deps = {}) {
     const server = http.createServer(app);
     const io = new Server(server);
 
-    app.use(express.json());
+    app.use(express.json({ limit: '50mb' }));
     app.use(express.static(path.join(__dirname, 'public')));
 
     // ─── ESTADO ──────────────────────────────────────
@@ -44,6 +44,7 @@ function createApp(deps = {}) {
     let sendingQueue = false;
     let ultimoQR = null;
     let statusAtual = 'iniciando';
+    let jaAutenticou = false;
 
     // ─── WHATSAPP CLIENT ─────────────────────────────
     const client = new Client({
@@ -51,6 +52,7 @@ function createApp(deps = {}) {
         puppeteer: {
             headless: true,
             executablePath: '/usr/bin/google-chrome-stable',
+            protocolTimeout: 0,
             args: [
                 '--no-sandbox',
                 '--disable-setuid-sandbox',
@@ -66,11 +68,23 @@ function createApp(deps = {}) {
 
     client.on('message', async (msg) => {
         if (msg.fromMe) return;
+        if (msg.isStatus) return;
         try {
             const sendMessage = async (text) => {
                 await client.sendMessage(msg.from, text);
             };
-            await bot.handleMessage(msg.body, msg.from, sendMessage);
+            const notificar = async (toPhone, text) => {
+                const clean = db.normalizarNumero(toPhone);
+                await client.sendMessage(`${clean}@c.us`, text);
+            };
+            const senderName = msg._data?.notifyName || '';
+            await bot.handleMessage(
+                msg.body,
+                msg.from,
+                sendMessage,
+                senderName,
+                notificar,
+            );
         } catch (e) {
             console.error('🤖 Bot error:', e.message);
         }
@@ -108,6 +122,10 @@ function createApp(deps = {}) {
                     type: 'warning',
                     msg: '🔐 Sessão encontrada! Autenticando...',
                 },
+                sincronizando: {
+                    type: 'warning',
+                    msg: '🔐 Sessão encontrada! Sincronizando...',
+                },
                 erro: {
                     type: 'error',
                     msg: '❌ Erro na autenticação — recarregue a página',
@@ -124,10 +142,12 @@ function createApp(deps = {}) {
 
     // ─── EVENTOS WHATSAPP ────────────────────────────
     client.on('loading_screen', (percent) => {
-        statusAtual = 'carregando';
+        // 'carregando' = carga inicial do Chrome/WA Web
+        // 'sincronizando' = sync de chats pós-autenticação
+        statusAtual = jaAutenticou ? 'sincronizando' : 'carregando';
         const txt = `⏳ Carregando WhatsApp Web: ${percent}%`;
         console.log(txt);
-        io.emit('status', { type: 'info', msg: txt });
+        io.emit('status', { type: 'info', msg: txt, statusAtual, percent });
     });
 
     client.on('qr', async (qr) => {
@@ -142,13 +162,38 @@ function createApp(deps = {}) {
         });
     });
 
+    // ─── WATCHDOG: reinicia se travar após autenticação ──
+    let stuckWatchdog = null;
+
+    const reiniciarCliente = async () => {
+        if (clientReady) return;
+        console.log('⚠️ WhatsApp travado — reiniciando processo...');
+        io.emit('status', {
+            type: 'warning',
+            msg: '🔄 Reiniciando WhatsApp automaticamente...',
+            statusAtual,
+        });
+        await new Promise((r) => setTimeout(r, 800));
+        try {
+            await client.destroy();
+        } catch (ignoredError) {
+            /* noop */
+        }
+        reiniciarProcesso();
+    };
+
     client.on('authenticated', () => {
+        jaAutenticou = true;
         statusAtual = 'autenticando';
         console.log('🔐 Autenticado');
         io.emit('status', { type: 'info', msg: '🔐 Autenticando...' });
+        // Se em 5 minutos não vier o ready, reinicia o processo
+        clearTimeout(stuckWatchdog);
+        stuckWatchdog = setTimeout(reiniciarCliente, 5 * 60 * 1000);
     });
 
     client.on('ready', async () => {
+        clearTimeout(stuckWatchdog);
         statusAtual = 'conectado';
         clientReady = true;
         clientInfo = client.info;
@@ -177,6 +222,10 @@ function createApp(deps = {}) {
         console.log('⚠️ Desconectado:', reason);
         io.emit('disconnected', reason);
         io.emit('status', { type: 'error', msg: '⚠️ Desconectado: ' + reason });
+    });
+
+    client.on('code', (code) => {
+        io.emit('pairing_code', { code });
     });
 
     // ─── UTILITÁRIOS ─────────────────────────────────
@@ -214,6 +263,23 @@ function createApp(deps = {}) {
             clientInfo = null;
             ultimoQR = null;
             res.json({ ok: true });
+        } catch (e) {
+            res.status(500).json({ error: e.message });
+        }
+    });
+
+    // ─── API: PAIRING CODE (conectar pelo número) ─────
+    app.post('/api/pairing-code', async (req, res) => {
+        if (clientReady)
+            return res.status(400).json({ error: 'WhatsApp já conectado' });
+        const { phone } = req.body;
+        if (!phone)
+            return res.status(400).json({ error: 'Número obrigatório' });
+        try {
+            const code = await client.requestPairingCode(
+                phone.replace(/\D/g, ''),
+            );
+            res.json({ code });
         } catch (e) {
             res.status(500).json({ error: e.message });
         }
@@ -488,21 +554,76 @@ function createApp(deps = {}) {
     app._setStatus = (val) => {
         statusAtual = val;
     };
+    app._bot = () => bot;
 
     return { app, server, io, client, bot };
 }
 
+// ─── Limpa cache corrompido do Chrome (acessível globalmente) ────
+function limparCacheChrome() {
+    const fsSync = require('fs');
+    const base = './.wwebjs_auth/session';
+    ['Cache', 'Code Cache', 'GPUCache', 'SingletonLock'].forEach((entry) => {
+        try {
+            fsSync.rmSync(`${base}/${entry}`, { recursive: true, force: true });
+        } catch (ignoredError) {
+            /* noop */
+        }
+    });
+}
+
+// ─── Reinicia o processo inteiro (spawna novo e sai) ─────────────
+function reiniciarProcesso() {
+    const { spawn } = require('child_process');
+    limparCacheChrome();
+    spawn(process.argv[0], process.argv.slice(1), {
+        detached: true,
+        stdio: 'inherit',
+        cwd: process.cwd(),
+    }).unref();
+    process.exit(1);
+}
+
 // ─── Exporta a factory ────────────────────────────────
-module.exports = { createApp };
+module.exports = { createApp, limparCacheChrome, reiniciarProcesso };
 
 /* c8 ignore start */
 // ─── Inicia quando executado diretamente ─────────────
 if (require.main === module) {
     console.log('🚀 Iniciando servidor...\n');
 
+    // Remove o SingletonLock do Chrome caso tenha ficado preso de uma execução anterior
+    try {
+        limparCacheChrome();
+    } catch (ignoredError) {
+        /* noop */
+    }
+
     const { server, client } = createApp();
 
-    client.initialize();
+    // Captura erros de inicialização (ex: "Execution context was destroyed")
+    // e reinicia o processo automaticamente com cache limpo
+    client.initialize().catch((err) => {
+        console.error('❌ Erro na inicialização:', err.message);
+        reiniciarProcesso();
+    });
+
+    // Graceful shutdown — fecha o Chrome limpo para não corromper o profile
+    let encerrado = false;
+    async function encerrar(sinal) {
+        if (encerrado) return;
+        encerrado = true;
+        console.log(`\n🛑 Encerrando servidor (${sinal})...`);
+        try {
+            await client.destroy();
+        } catch (ignoredError) {
+            /* noop */
+        }
+        server.close(() => process.exit(0));
+        setTimeout(() => process.exit(1), 5000);
+    }
+    process.on('SIGINT', () => encerrar('SIGINT'));
+    process.on('SIGTERM', () => encerrar('SIGTERM'));
 
     server.on('error', (e) => {
         if (e.code === 'EADDRINUSE') {

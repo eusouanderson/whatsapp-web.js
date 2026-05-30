@@ -54,16 +54,26 @@ class Bot {
     _registerDefaultActions() {
         this.registerAction(
             'talk_to_professional',
-            async (phone, sendMessage) => {
+            async (phone, sendMessage, notificar) => {
+                const conv = this._getConversation(phone);
+                const nomeP =
+                    conv.context?.senderName || phone.replace('@c.us', '');
+
                 const lines = ['🔌 *Falar com profissional*', ''];
                 lines.push(
                     'Sua solicitação foi encaminhada. Em breve um de nossos profissionais entrará em contato.',
                 );
-                if (this.config.professionalContact) {
-                    lines.push(`Contato: ${this.config.professionalContact}`);
-                }
                 lines.push('', '_Digite 0 para voltar ao menu principal._');
                 await sendMessage(lines.join('\n'));
+
+                if (this.config.professionalContact && notificar) {
+                    const numero = phone.replace('@c.us', '');
+                    await notificar(
+                        this.config.professionalContact,
+                        `🔔 *Novo atendimento solicitado*\n\nO paciente *${nomeP}* deseja falar com um profissional.\n\n📱 Número: wa.me/${numero}`,
+                    );
+                }
+
                 this.resetConversation(phone);
             },
         );
@@ -156,22 +166,34 @@ class Bot {
         return lines.join('\n');
     }
 
-    async showMainMenu(phone, sendMessage, prefix) {
+    async showMainMenu(phone, sendMessage, prefix, senderName = '') {
         const menu = this._renderMenu();
-        const text = prefix
-            ? `${prefix}\n\n${menu}`
-            : `${this.config.greetingMessage}\n\n${menu}`;
+        let greeting = this.config.greetingMessage;
+        if (senderName) {
+            const firstName = senderName.trim().split(' ')[0];
+            greeting = greeting.replace(/{nome}/g, firstName);
+        }
+        const text = prefix ? `${prefix}\n\n${menu}` : `${greeting}\n\n${menu}`;
         await sendMessage(text);
     }
 
-    async handleMessage(messageText, phone, sendMessage) {
+    async handleMessage(
+        messageText,
+        phone,
+        sendMessage,
+        senderName = '',
+        notificar = null,
+    ) {
         if (!this.config.enabled) return;
 
         const conv = this._getConversation(phone);
+        if (senderName && !conv.context.senderName) {
+            conv.context.senderName = senderName;
+        }
 
         if (conv.state === 'new') {
             conv.state = 'main_menu';
-            await this.showMainMenu(phone, sendMessage);
+            await this.showMainMenu(phone, sendMessage, null, senderName);
             return;
         }
 
@@ -188,7 +210,12 @@ class Bot {
 
         if (matchedOption) {
             conv.state = 'main_menu';
-            await this._executeAction(matchedOption, phone, sendMessage);
+            await this._executeAction(
+                matchedOption,
+                phone,
+                sendMessage,
+                notificar,
+            );
             return;
         }
 
@@ -204,11 +231,11 @@ class Bot {
         );
     }
 
-    async _executeAction(option, phone, sendMessage) {
+    async _executeAction(option, phone, sendMessage, notificar = null) {
         const actionKey = option.action || option.key;
         const handler = this._actions.get(actionKey);
         if (handler) {
-            await handler(phone, sendMessage);
+            await handler(phone, sendMessage, notificar);
         } else {
             await sendMessage('Opção não disponível no momento.');
             this.resetConversation(phone);

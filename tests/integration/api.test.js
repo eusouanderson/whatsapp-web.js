@@ -70,6 +70,8 @@ const mockDb = {
         envios_ok: 4,
         envios_erro: 1,
     })),
+    lerBotConfig: vi.fn(() => ({})),
+    salvarBotConfig: vi.fn(),
 };
 
 /** Mock do CSV parser */
@@ -1178,6 +1180,43 @@ describe('Bot — /api/bot/*', () => {
                 .send({ menuOptions: newOptions });
             const res = await req().get('/api/bot/config');
             expect(res.body.menuOptions).toEqual(newOptions);
+        });
+
+        it('persiste config no banco ao salvar', async () => {
+            mockDb.salvarBotConfig.mockClear();
+            await req()
+                .put('/api/bot/config')
+                .send({ greetingMessage: 'Olá persistente!' });
+            expect(mockDb.salvarBotConfig).toHaveBeenCalledOnce();
+            const savedArg = mockDb.salvarBotConfig.mock.calls[0][0];
+            expect(savedArg.greetingMessage).toBe('Olá persistente!');
+        });
+    });
+
+    describe('persistência do bot config', () => {
+        it('carrega config salva do banco na inicialização quando não vazia', () => {
+            const savedConfig = {
+                enabled: false,
+                address: 'Rua Persistida, 99',
+            };
+            mockDb.lerBotConfig.mockReturnValueOnce(savedConfig);
+            const { createApp } = require('../../server.js');
+            const { bot: botLocal } = createApp({
+                ...deps,
+                db: { ...mockDb, lerBotConfig: () => savedConfig },
+            });
+            expect(botLocal.config.enabled).toBe(false);
+            expect(botLocal.config.address).toBe('Rua Persistida, 99');
+        });
+
+        it('não sobrescreve defaults quando banco retorna objeto vazio', () => {
+            const { createApp } = require('../../server.js');
+            const { bot: botLocal } = createApp({
+                ...deps,
+                db: { ...mockDb, lerBotConfig: () => ({}) },
+            });
+            expect(botLocal.config.enabled).toBe(true);
+            expect(botLocal.config.menuOptions).toHaveLength(5);
         });
     });
 

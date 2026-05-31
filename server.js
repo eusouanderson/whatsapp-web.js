@@ -65,6 +65,10 @@ function createApp(deps = {}) {
 
     // ─── BOT ──────────────────────────────────────────
     const bot = new Bot();
+    const savedBotConfig = db.lerBotConfig();
+    if (Object.keys(savedBotConfig).length > 0) {
+        bot.updateConfig(savedBotConfig);
+    }
 
     client.on('message', async (msg) => {
         if (msg.fromMe) return;
@@ -512,6 +516,7 @@ function createApp(deps = {}) {
 
     app.put('/api/bot/config', (req, res) => {
         bot.updateConfig(req.body);
+        db.salvarBotConfig(bot.getConfig());
         res.json({ ok: true });
     });
 

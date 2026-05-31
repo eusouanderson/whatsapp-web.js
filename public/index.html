@@ -1477,35 +1477,10 @@
                                 margin-bottom: 12px;
                             "
                         >
-                            Personalize o texto de cada opção. Para adicionar
-                            novas ações no futuro, edite o arquivo
-                            <code
-                                style="
-                                    background: #eee;
-                                    padding: 1px 5px;
-                                    border-radius: 3px;
-                                "
-                                >bot.js</code
-                            >.
+                            Ative/desative opções existentes ou adicione novas
+                            com resposta personalizada.
                         </p>
-                        <div id="menu-options-editor">
-                            <div
-                                style="
-                                    display: grid;
-                                    grid-template-columns: 40px 1fr;
-                                    gap: 8px;
-                                    align-items: center;
-                                    padding-bottom: 8px;
-                                    border-bottom: 1px solid var(--border);
-                                    margin-bottom: 8px;
-                                    font-size: 0.82rem;
-                                    color: var(--muted);
-                                    font-weight: 600;
-                                "
-                            >
-                                <span>#</span><span>Texto da opção</span>
-                            </div>
-                        </div>
+                        <div id="menu-options-editor"></div>
                     </div>
 
                     <!-- CARD: Informações da Clínica -->
@@ -1520,6 +1495,15 @@
                                     placeholder="https://..."
                                     onchange="salvarBotConfig()"
                                 />
+                            </div>
+                            <div>
+                                <label>💬 Mensagem ao marcar consulta</label>
+                                <textarea
+                                    id="bot-schedule-message"
+                                    style="min-height: 70px"
+                                    onchange="salvarBotConfig()"
+                                    placeholder="Deixe em branco para usar o texto padrão. Exemplo: Ótimo! Para agendar sua consulta, acesse o link abaixo ou nos chame pelo telefone. Temos horários disponíveis ainda esta semana!"
+                                ></textarea>
                             </div>
                             <div>
                                 <label>📍 Endereço</label>
@@ -3164,6 +3148,8 @@ Olá {nome}! Temos novidades para você 🎉</textarea
                         config.greetingMessage || '';
                     document.getElementById('bot-scheduling-link').value =
                         config.schedulingLink || '';
+                    document.getElementById('bot-schedule-message').value =
+                        config.scheduleMessage || '';
                     document.getElementById('bot-address').value =
                         config.address || '';
                     document.getElementById('bot-plans').value = (
@@ -3183,14 +3169,95 @@ Olá {nome}! Temos novidades para você 🎉</textarea
                     'menu-options-editor',
                 );
                 let html =
-                    '<div style="display:grid;grid-template-columns:40px 1fr;gap:8px;align-items:center;padding-bottom:8px;border-bottom:1px solid var(--border);margin-bottom:8px;font-size:.82rem;color:var(--muted);font-weight:600"><span>#</span><span>Texto da opção</span></div>';
+                    '<div style="display:grid;grid-template-columns:42px 36px 1fr 34px;gap:8px;align-items:center;padding-bottom:8px;border-bottom:1px solid var(--border);margin-bottom:8px;font-size:.82rem;color:var(--muted);font-weight:600">' +
+                    '<span title="Ativar/desativar">Ativo</span><span>#</span><span>Texto da opção</span><span></span></div>';
+
                 options.forEach((opt) => {
-                    html += `<div style="display:grid;grid-template-columns:40px 1fr;gap:8px;align-items:center;margin-bottom:6px">
-      <span style="text-align:center;font-weight:700;color:var(--dark);font-size:1.1rem">${opt.key}</span>
-      <input type="text" class="menu-opt-input" data-key="${opt.key}" data-action="${opt.action || ''}" value="${esc(opt.label)}" onchange="salvarBotConfig()"/>
-    </div>`;
+                    const isCustom = opt.action === 'custom_response';
+                    const isEnabled = opt.enabled !== false;
+                    const rowOpacity = isEnabled ? '1' : '0.45';
+                    const disabledAttr = isEnabled ? '' : 'disabled';
+
+                    html += `<div class="menu-opt-row" data-key="${opt.key}" style="margin-bottom:${isCustom ? '10px' : '6px'};opacity:${rowOpacity};transition:opacity .2s">
+  <div style="display:grid;grid-template-columns:42px 36px 1fr 34px;gap:8px;align-items:center">
+    <label style="display:flex;justify-content:center;align-items:center;cursor:pointer">
+      <input type="checkbox" class="menu-opt-enabled" data-key="${opt.key}" ${isEnabled ? 'checked' : ''} onchange="toggleMenuOption(this)" style="width:16px;height:16px;cursor:pointer"/>
+    </label>
+    <span style="text-align:center;font-weight:700;color:var(--dark);font-size:1.1rem">${esc(opt.key)}</span>
+    <input type="text" class="menu-opt-input" data-key="${opt.key}" data-action="${esc(opt.action || '')}" value="${esc(opt.label)}" onchange="salvarBotConfig()" ${disabledAttr} placeholder="Texto exibido no menu"/>
+    ${isCustom ? `<button type="button" onclick="removerMenuOption('${esc(opt.key)}')" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:1.2rem;padding:0;line-height:1" title="Remover opção">🗑️</button>` : '<span></span>'}
+  </div>
+  ${
+      isCustom
+          ? `<div style="margin:6px 0 0 86px">
+    <textarea class="menu-opt-response" data-key="${esc(opt.key)}" rows="2" placeholder="Resposta enviada ao paciente ao selecionar esta opção..." onchange="salvarBotConfig()" style="font-size:.84rem;min-height:54px;width:100%;box-sizing:border-box" ${disabledAttr}>${esc(opt.response || '')}</textarea>
+  </div>`
+          : ''
+  }
+</div>`;
                 });
+
+                html +=
+                    '<button type="button" onclick="adicionarMenuOption()" style="margin-top:8px;padding:7px 14px;background:var(--dark);color:#fff;border:none;border-radius:6px;font-size:.85rem;cursor:pointer;display:inline-flex;align-items:center;gap:6px">➕ Adicionar opção</button>';
+
                 container.innerHTML = html;
+            }
+
+            function coletarMenuOptions() {
+                return [...document.querySelectorAll('.menu-opt-row')].map(
+                    (row) => {
+                        const inp = row.querySelector('.menu-opt-input');
+                        const cb = row.querySelector('.menu-opt-enabled');
+                        const ta = row.querySelector('.menu-opt-response');
+                        const opt = {
+                            key: inp.dataset.key,
+                            label: inp.value.trim(),
+                            action: inp.dataset.action || undefined,
+                            enabled: cb ? cb.checked : true,
+                        };
+                        if (ta !== null) opt.response = ta.value;
+                        return opt;
+                    },
+                );
+            }
+
+            function toggleMenuOption(checkbox) {
+                const row = checkbox.closest('.menu-opt-row');
+                const isEnabled = checkbox.checked;
+                row.style.opacity = isEnabled ? '1' : '0.45';
+                row.querySelectorAll('input[type=text], textarea').forEach(
+                    (el) => {
+                        el.disabled = !isEnabled;
+                    },
+                );
+                salvarBotConfig();
+            }
+
+            function adicionarMenuOption() {
+                const current = coletarMenuOptions();
+                const numericKeys = current
+                    .map((o) => parseInt(o.key))
+                    .filter((k) => !isNaN(k));
+                const nextKey = String(
+                    numericKeys.length ? Math.max(...numericKeys) + 1 : 6,
+                );
+                current.push({
+                    key: nextKey,
+                    label: '',
+                    action: 'custom_response',
+                    response: '',
+                    enabled: true,
+                });
+                renderMenuOptions(current);
+                const inputs = document.querySelectorAll('.menu-opt-input');
+                if (inputs.length) inputs[inputs.length - 1].focus();
+            }
+
+            function removerMenuOption(key) {
+                const current = coletarMenuOptions();
+                const filtered = current.filter((o) => o.key !== key);
+                renderMenuOptions(filtered);
+                salvarBotConfig();
             }
 
             async function salvarBotConfig() {
@@ -3201,6 +3268,9 @@ Olá {nome}! Temos novidades para você 🎉</textarea
                         .value.trim(),
                     schedulingLink: document
                         .getElementById('bot-scheduling-link')
+                        .value.trim(),
+                    scheduleMessage: document
+                        .getElementById('bot-schedule-message')
                         .value.trim(),
                     address: document
                         .getElementById('bot-address')
@@ -3213,13 +3283,7 @@ Olá {nome}! Temos novidades para você 🎉</textarea
                     professionalContact: document
                         .getElementById('bot-professional-contact')
                         .value.trim(),
-                    menuOptions: [
-                        ...document.querySelectorAll('.menu-opt-input'),
-                    ].map((inp) => ({
-                        key: inp.dataset.key,
-                        label: inp.value.trim(),
-                        action: inp.dataset.action || undefined,
-                    })),
+                    menuOptions: coletarMenuOptions(),
                 };
 
                 const fb = document.getElementById('bot-saved-feedback');

@@ -15,6 +15,7 @@ import {
     gerarTemplate,
     aplicarTemplate,
     gerarResposta,
+    gerarRespostaRecepcao,
 } from '../../groq-ai.js';
 
 // ─── HELPERS ─────────────────────────────────────────────────
@@ -264,6 +265,105 @@ describe('gerarResposta', () => {
 });
 
 // ════════════════════════════════════════════════════════════
+//  gerarRespostaRecepcao
+// ════════════════════════════════════════════════════════════
+describe('gerarRespostaRecepcao', () => {
+    beforeEach(() => {
+        mockFetch.mockClear();
+    });
+
+    it('retorna resposta gerada pela IA', async () => {
+        mockGroqResponse(
+            'Olá! Que bom que entrou em contato. Podemos agendar sua consulta hoje.',
+        );
+        const resultado = await gerarRespostaRecepcao(
+            'Tenho dor de dente',
+            {},
+            '',
+        );
+        expect(resultado).toBe(
+            'Olá! Que bom que entrou em contato. Podemos agendar sua consulta hoje.',
+        );
+    });
+
+    it('faz exatamente 1 chamada à API', async () => {
+        mockGroqResponse('Resposta');
+        await gerarRespostaRecepcao('Oi', {}, '');
+        expect(mockFetch).toHaveBeenCalledTimes(1);
+    });
+
+    it('usa system message com informações da clínica', async () => {
+        mockGroqResponse('ok');
+        const config = {
+            address: 'Rua das Flores, 10',
+            schedulingLink: 'https://agenda.com',
+            plans: ['Unimed', 'Bradesco'],
+        };
+        await gerarRespostaRecepcao('Oi', config, '');
+        const [, options] = mockFetch.mock.calls[0];
+        const body = JSON.parse(options.body);
+        expect(body.messages[0].role).toBe('system');
+        expect(body.messages[0].content).toContain('Rua das Flores, 10');
+        expect(body.messages[0].content).toContain('https://agenda.com');
+        expect(body.messages[0].content).toContain('Unimed');
+    });
+
+    it('inclui o nome do paciente no system message quando informado', async () => {
+        mockGroqResponse('ok');
+        await gerarRespostaRecepcao('Oi', {}, 'Ana Lima');
+        const [, options] = mockFetch.mock.calls[0];
+        const body = JSON.parse(options.body);
+        expect(body.messages[0].content).toContain('Ana');
+    });
+
+    it('não inclui nome no system message quando não informado', async () => {
+        mockGroqResponse('ok');
+        await gerarRespostaRecepcao('Oi', {}, '');
+        const [, options] = mockFetch.mock.calls[0];
+        const body = JSON.parse(options.body);
+        expect(body.messages[0].content).not.toContain('paciente se chama');
+    });
+
+    it('envia a mensagem do paciente como user role', async () => {
+        mockGroqResponse('ok');
+        await gerarRespostaRecepcao('quero agendar', {}, '');
+        const [, options] = mockFetch.mock.calls[0];
+        const body = JSON.parse(options.body);
+        expect(body.messages[1].role).toBe('user');
+        expect(body.messages[1].content).toBe('quero agendar');
+    });
+
+    it('lança erro quando a API retorna status de erro', async () => {
+        mockGroqError(503, 'Service Unavailable');
+        await expect(gerarRespostaRecepcao('Oi', {}, '')).rejects.toThrow(
+            'Groq API 503',
+        );
+    });
+
+    it('remove espaços extras do retorno', async () => {
+        mockGroqResponse('  Olá! Podemos ajudar.  \n');
+        const r = await gerarRespostaRecepcao('Oi', {}, '');
+        expect(r).toBe('Olá! Podemos ajudar.');
+    });
+
+    it('usa agendamento via telefone quando schedulingLink não configurado', async () => {
+        mockGroqResponse('ok');
+        await gerarRespostaRecepcao('Oi', { schedulingLink: '' }, '');
+        const [, options] = mockFetch.mock.calls[0];
+        const body = JSON.parse(options.body);
+        expect(body.messages[0].content).toContain('telefone');
+    });
+
+    it('usa mensagem padrão de planos quando plans está vazio', async () => {
+        mockGroqResponse('ok');
+        await gerarRespostaRecepcao('Oi', { plans: [] }, '');
+        const [, options] = mockFetch.mock.calls[0];
+        const body = JSON.parse(options.body);
+        expect(body.messages[0].content).toContain('consulte a equipe');
+    });
+});
+
+// ════════════════════════════════════════════════════════════
 //  CJS require path (v8 coverage tracking de function bodies)
 //  v8 coverage rastreia bodies apenas para módulos carregados
 //  via CJS require(). O ESM import do Vite não expõe bodies.
@@ -327,6 +427,36 @@ describe('CJS require (v8 coverage)', () => {
         const cjs = cjsRequire('../../groq-ai.js');
         await expect(cjs.gerarResposta('teste')).rejects.toThrow(
             'Groq API 502',
+        );
+    });
+
+    it('gerarRespostaRecepcao success path via CJS (sem schedulingLink)', async () => {
+        mockGroqResponse('Olá! Temos horários disponíveis.');
+        const cjs = cjsRequire('../../groq-ai.js');
+        const resultado = await cjs.gerarRespostaRecepcao(
+            'quero marcar consulta',
+            { address: 'Rua X', plans: ['Unimed'] },
+            'João',
+        );
+        expect(resultado).toBe('Olá! Temos horários disponíveis.');
+    });
+
+    it('gerarRespostaRecepcao success path via CJS (com schedulingLink)', async () => {
+        mockGroqResponse('Pode agendar pelo link!');
+        const cjs = cjsRequire('../../groq-ai.js');
+        const resultado = await cjs.gerarRespostaRecepcao(
+            'como agendo?',
+            { schedulingLink: 'https://agenda.com', plans: ['Amil'] },
+            '',
+        );
+        expect(resultado).toBe('Pode agendar pelo link!');
+    });
+
+    it('gerarRespostaRecepcao error path via CJS', async () => {
+        mockGroqError(504, 'Gateway Timeout');
+        const cjs = cjsRequire('../../groq-ai.js');
+        await expect(cjs.gerarRespostaRecepcao('Oi', {}, '')).rejects.toThrow(
+            'Groq API 504',
         );
     });
 });

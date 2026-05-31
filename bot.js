@@ -11,9 +11,14 @@
 
 class Bot {
     constructor(options = {}) {
-        const { gerarResposta: userGerarResposta } = options;
+        const {
+            gerarResposta: userGerarResposta,
+            gerarRespostaRecepcao: userGerarRecepcao,
+        } = options;
         this._gerarResposta =
             userGerarResposta || require('./groq-ai').gerarResposta;
+        this._gerarRespostaRecepcao =
+            userGerarRecepcao || require('./groq-ai').gerarRespostaRecepcao;
 
         this.conversations = new Map();
         this._actions = new Map();
@@ -45,6 +50,7 @@ class Bot {
                 { key: '5', label: '💬 Outro assunto', action: 'ai_chat' },
             ],
             schedulingLink: '',
+            scheduleMessage: '',
             address: 'Rua Exemplo, 123 - Centro\nCEP: 00000-000\nCidade - SP',
             plans: ['Plano Básico', 'Plano Premium', 'Plano Empresarial'],
             professionalContact: '',
@@ -80,7 +86,12 @@ class Bot {
 
         this.registerAction('schedule', async (phone, sendMessage) => {
             const lines = ['📅 *Agendar Consulta*', ''];
-            if (this.config.schedulingLink) {
+            if (this.config.scheduleMessage) {
+                lines.push(this.config.scheduleMessage);
+                if (this.config.schedulingLink) {
+                    lines.push('', this.config.schedulingLink);
+                }
+            } else if (this.config.schedulingLink) {
                 lines.push(
                     'Clique no link abaixo para escolher o melhor horário:',
                 );
@@ -159,9 +170,11 @@ class Bot {
 
     _renderMenu() {
         const lines = [this.config.menuHeader];
-        this.config.menuOptions.forEach((opt) => {
-            lines.push(`${opt.key} - ${opt.label}`);
-        });
+        this.config.menuOptions
+            .filter((opt) => opt.enabled !== false)
+            .forEach((opt) => {
+                lines.push(`${opt.key} - ${opt.label}`);
+            });
         lines.push(this.config.menuFooter);
         return lines.join('\n');
     }
@@ -191,13 +204,13 @@ class Bot {
             conv.context.senderName = senderName;
         }
 
+        const trimmed = (messageText || '').trim();
+
         if (conv.state === 'new') {
             conv.state = 'main_menu';
-            await this.showMainMenu(phone, sendMessage, null, senderName);
+            await this._showSmartMenu(phone, sendMessage, trimmed, senderName);
             return;
         }
-
-        const trimmed = (messageText || '').trim();
 
         if (trimmed === '0') {
             await this._actions.get('back_to_menu')(phone, sendMessage);
@@ -205,7 +218,7 @@ class Bot {
         }
 
         const matchedOption = this.config.menuOptions.find(
-            (o) => o.key === trimmed,
+            (o) => o.key === trimmed && o.enabled !== false,
         );
 
         if (matchedOption) {
@@ -224,14 +237,40 @@ class Bot {
             return;
         }
 
-        await this.showMainMenu(
-            phone,
-            sendMessage,
-            '❓ Opção inválida. Tente novamente:',
-        );
+        // Texto livre no menu principal: LLM entende e responde com o menu
+        await this._showSmartMenu(phone, sendMessage, trimmed, senderName);
+    }
+
+    async _showSmartMenu(phone, sendMessage, messageText, senderName = '') {
+        const conv = this._getConversation(phone);
+        const name = senderName || conv.context.senderName || '';
+        let intro;
+        try {
+            intro = await this._gerarRespostaRecepcao(
+                messageText,
+                this.config,
+                name,
+            );
+        } catch (ignoredError) {
+            intro = this.config.greetingMessage;
+            if (name) {
+                const firstName = name.trim().split(' ')[0];
+                intro = intro.replace(/{nome}/g, firstName);
+            }
+        }
+        const menu = this._renderMenu();
+        await sendMessage(`${intro}\n\n${menu}`);
     }
 
     async _executeAction(option, phone, sendMessage, notificar = null) {
+        if (option.action === 'custom_response') {
+            const text = (option.response || option.label || '').trim();
+            await sendMessage(
+                text + '\n\n_Digite 0 para voltar ao menu principal._',
+            );
+            this.resetConversation(phone);
+            return;
+        }
         const actionKey = option.action || option.key;
         const handler = this._actions.get(actionKey);
         if (handler) {

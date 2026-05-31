@@ -161,6 +161,19 @@ function normalizarNumero(numero) {
     return n;
 }
 
+// ─── BOT CONFIG ───────────────────────────────────────
+
+function lerBotConfig() {
+    const dados = ler();
+    return dados.botConfig || {};
+}
+
+function salvarBotConfig(config) {
+    const dados = ler();
+    dados.botConfig = config;
+    salvar(dados);
+}
+
 module.exports = {
     listarContatos,
     buscarPorNumero,
@@ -172,4 +185,6 @@ module.exports = {
     historicoContato,
     resumo,
     normalizarNumero,
+    lerBotConfig,
+    salvarBotConfig,
 };

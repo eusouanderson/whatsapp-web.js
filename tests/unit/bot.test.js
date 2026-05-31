@@ -5,6 +5,11 @@ const mockGerarResposta = vi.fn(
     async (msg) => `Resposta automática para: "${msg}"`,
 );
 
+const mockGerarRespostaRecepcao = vi.fn(
+    async (msg, _config, name) =>
+        `Recepção LLM: "${msg}"${name ? ` — Olá, ${name.split(' ')[0]}!` : ''}`,
+);
+
 function makeSendMessage() {
     const sent = [];
     const fn = async (text) => {
@@ -19,7 +24,10 @@ describe('Bot', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
-        bot = new Bot({ gerarResposta: mockGerarResposta });
+        bot = new Bot({
+            gerarResposta: mockGerarResposta,
+            gerarRespostaRecepcao: mockGerarRespostaRecepcao,
+        });
     });
 
     describe('constructor e config padrão', () => {
@@ -44,6 +52,7 @@ describe('Bot', () => {
             expect(cfg).toHaveProperty('menuFooter');
             expect(cfg).toHaveProperty('menuOptions');
             expect(cfg).toHaveProperty('schedulingLink');
+            expect(cfg).toHaveProperty('scheduleMessage');
             expect(cfg).toHaveProperty('address');
             expect(cfg).toHaveProperty('plans');
             expect(cfg).toHaveProperty('professionalContact');
@@ -79,16 +88,20 @@ describe('Bot', () => {
             expect(send.sent).toHaveLength(0);
         });
 
-        it('envia menu principal na primeira mensagem', async () => {
+        it('na primeira mensagem chama LLM de recepção e exibe o menu', async () => {
             const send = makeSendMessage();
             await bot.handleMessage('Olá', '5511900000001', send);
             expect(send.sent).toHaveLength(1);
+            expect(mockGerarRespostaRecepcao).toHaveBeenCalledWith(
+                'Olá',
+                expect.any(Object),
+                '',
+            );
             expect(send.sent[0]).toContain('Menu de Atendimento');
-            expect(send.sent[0]).toContain(bot.config.greetingMessage);
+            expect(send.sent[0]).toContain('Recepção LLM:');
         });
 
-        it('usa o nome do remetente na saudação quando {nome} está configurado', async () => {
-            bot.updateConfig({ greetingMessage: 'Olá, {nome}!' });
+        it('passa o nome do remetente para gerarRespostaRecepcao', async () => {
             const send = makeSendMessage();
             await bot.handleMessage(
                 'Oi',
@@ -96,7 +109,49 @@ describe('Bot', () => {
                 send,
                 'Carlos Souza',
             );
+            expect(mockGerarRespostaRecepcao).toHaveBeenCalledWith(
+                'Oi',
+                expect.any(Object),
+                'Carlos Souza',
+            );
             expect(send.sent[0]).toContain('Olá, Carlos!');
+        });
+
+        it('usa greeting estático como fallback quando LLM falha', async () => {
+            mockGerarRespostaRecepcao.mockRejectedValueOnce(
+                new Error('API error'),
+            );
+            const send = makeSendMessage();
+            await bot.handleMessage('Oi', '5511900000001', send);
+            expect(send.sent[0]).toContain(bot.config.greetingMessage);
+            expect(send.sent[0]).toContain('Menu de Atendimento');
+        });
+
+        it('fallback substitui {nome} no greeting quando senderName informado', async () => {
+            mockGerarRespostaRecepcao.mockRejectedValueOnce(
+                new Error('API error'),
+            );
+            bot.updateConfig({ greetingMessage: 'Olá, {nome}!' });
+            const send = makeSendMessage();
+            await bot.handleMessage('Oi', '5511900000001', send, 'Ana Lima');
+            expect(send.sent[0]).toContain('Olá, Ana!');
+        });
+
+        it('texto livre no main_menu chama LLM e exibe menu', async () => {
+            const send = makeSendMessage();
+            await bot.handleMessage('Oi', '5511900000001', send);
+            mockGerarRespostaRecepcao.mockClear();
+            await bot.handleMessage(
+                'quero saber sobre clareamento',
+                '5511900000001',
+                send,
+            );
+            expect(mockGerarRespostaRecepcao).toHaveBeenCalledWith(
+                'quero saber sobre clareamento',
+                expect.any(Object),
+                expect.any(String),
+            );
+            expect(send.sent[1]).toContain('Menu de Atendimento');
         });
 
         it('processa escolha de opção válida do menu', async () => {
@@ -108,15 +163,7 @@ describe('Bot', () => {
             expect(send.sent[1]).toContain('Falar com profissional');
         });
 
-        it('opção inválida mostra menu com prefixo de erro', async () => {
-            const send = makeSendMessage();
-            await bot.handleMessage('Olá', '5511900000001', send);
-            await bot.handleMessage('99', '5511900000001', send);
-            expect(send.sent).toHaveLength(2);
-            expect(send.sent[1]).toContain('Opção inválida');
-        });
-
-        it('digitar 0 volta ao menu principal', async () => {
+        it('digitar 0 volta ao menu principal (estático)', async () => {
             const send = makeSendMessage();
             await bot.handleMessage('Olá', '5511900000001', send);
             await bot.handleMessage('1', '5511900000001', send);
@@ -135,6 +182,63 @@ describe('Bot', () => {
             expect(bot.conversations.has('5511900000001')).toBe(false);
         });
 
+        it('opção desabilitada não aparece no menu', async () => {
+            bot.config.menuOptions[0] = {
+                ...bot.config.menuOptions[0],
+                enabled: false,
+            };
+            const send = makeSendMessage();
+            await bot.handleMessage('Olá', '5511900000001', send);
+            expect(send.sent[0]).not.toContain('1 - ');
+        });
+
+        it('opção desabilitada chama LLM ao receber seu key como texto livre', async () => {
+            bot.config.menuOptions[0] = {
+                ...bot.config.menuOptions[0],
+                enabled: false,
+            };
+            const send = makeSendMessage();
+            await bot.handleMessage('Olá', '5511900000001', send);
+            mockGerarRespostaRecepcao.mockClear();
+            await bot.handleMessage('1', '5511900000001', send);
+            expect(mockGerarRespostaRecepcao).toHaveBeenCalledWith(
+                '1',
+                expect.any(Object),
+                expect.any(String),
+            );
+            expect(send.sent[1]).toContain('Menu de Atendimento');
+        });
+
+        it('custom_response envia response text e reseta', async () => {
+            bot.config.menuOptions.push({
+                key: '6',
+                label: '💰 Preços',
+                action: 'custom_response',
+                response: 'Consulta: R$150. Limpeza: R$200.',
+                enabled: true,
+            });
+            const send = makeSendMessage();
+            await bot.handleMessage('Olá', '5511900000001', send);
+            await bot.handleMessage('6', '5511900000001', send);
+            expect(send.sent[1]).toContain('Consulta: R$150');
+            expect(send.sent[1]).toContain('menu principal');
+            expect(bot.conversations.has('5511900000001')).toBe(false);
+        });
+
+        it('custom_response usa label quando response está vazio', async () => {
+            bot.config.menuOptions.push({
+                key: '7',
+                label: 'Info geral',
+                action: 'custom_response',
+                response: '',
+                enabled: true,
+            });
+            const send = makeSendMessage();
+            await bot.handleMessage('Olá', '5511900000001', send);
+            await bot.handleMessage('7', '5511900000001', send);
+            expect(send.sent[1]).toContain('Info geral');
+        });
+
         it('handleSchedule envia link quando configurado', async () => {
             bot.config.schedulingLink = 'https://agenda.com';
             const send = makeSendMessage();
@@ -149,6 +253,27 @@ describe('Bot', () => {
             await bot.handleMessage('Olá', '5511900000001', send);
             await bot.handleMessage('2', '5511900000001', send);
             expect(send.sent[1]).toContain('telefone');
+        });
+
+        it('handleSchedule usa scheduleMessage personalizada quando configurada', async () => {
+            bot.config.scheduleMessage =
+                'Ficamos felizes em atendê-lo! Entre em contato.';
+            const send = makeSendMessage();
+            await bot.handleMessage('Olá', '5511900000001', send);
+            await bot.handleMessage('2', '5511900000001', send);
+            expect(send.sent[1]).toContain(
+                'Ficamos felizes em atendê-lo! Entre em contato.',
+            );
+        });
+
+        it('handleSchedule exibe scheduleMessage e link juntos quando ambos configurados', async () => {
+            bot.config.scheduleMessage = 'Agende pelo link abaixo:';
+            bot.config.schedulingLink = 'https://agenda.com';
+            const send = makeSendMessage();
+            await bot.handleMessage('Olá', '5511900000001', send);
+            await bot.handleMessage('2', '5511900000001', send);
+            expect(send.sent[1]).toContain('Agende pelo link abaixo:');
+            expect(send.sent[1]).toContain('https://agenda.com');
         });
 
         it('handleAddress mostra endereço configurado', async () => {

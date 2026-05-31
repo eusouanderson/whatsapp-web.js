@@ -1,7 +1,7 @@
 /**
  * ============================================================
  *  🗄️  TESTES — db.js
- *  Cobertura: normalizarNumero, CRUD, histórico, resumo
+ *  Cobertura: normalizarNumero, CRUD, histórico, resumo, botConfig
  * ============================================================
  */
 
@@ -313,5 +313,42 @@ describe('resumo', () => {
         expect(resumo.total_envios).toBe(3);
         expect(resumo.envios_ok).toBe(2);
         expect(resumo.envios_erro).toBe(1);
+    });
+});
+
+// ════════════════════════════════════════════════════════════
+//  lerBotConfig / salvarBotConfig
+// ════════════════════════════════════════════════════════════
+describe('lerBotConfig / salvarBotConfig', () => {
+    it('retorna objeto vazio quando não há config salva', () => {
+        const cfg = db.lerBotConfig();
+        expect(cfg).toEqual({});
+    });
+
+    it('salva e recupera a config do bot corretamente', () => {
+        const config = {
+            enabled: false,
+            greetingMessage: 'Oi!',
+            address: 'Rua X',
+        };
+        db.salvarBotConfig(config);
+        const recovered = db.lerBotConfig();
+        expect(recovered).toEqual(config);
+    });
+
+    it('sobrescreve config anterior ao salvar novamente', () => {
+        db.salvarBotConfig({ enabled: true });
+        db.salvarBotConfig({ enabled: false, address: 'Novo' });
+        const cfg = db.lerBotConfig();
+        expect(cfg.enabled).toBe(false);
+        expect(cfg.address).toBe('Novo');
+    });
+
+    it('preserva contatos e histórico ao salvar botConfig', () => {
+        db.inserirContato('Ana', '11900000001');
+        db.salvarBotConfig({ greetingMessage: 'Olá!' });
+        const contatos = db.listarContatos();
+        expect(contatos).toHaveLength(1);
+        expect(db.lerBotConfig().greetingMessage).toBe('Olá!');
     });
 });
